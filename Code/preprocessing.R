@@ -164,6 +164,8 @@ vc_uninj_nbu <- as.data.frame(table(data_no_blank_unk["Total.Uninjured"]))
 #     - All good.
 #   * Field Total.Uninjured:
 #     - All good.
+
+# Replace all "Fatal*" values with a common "Fatal" value.
 data_clean <- data_no_blank_unk %>%
               mutate(Injury.Severity = gsub("Fatal.*", "Fatal", Injury.Severity))
 # Checking value count of Injury.Severity again.
@@ -178,10 +180,10 @@ print(summary(y)) # Mean = 3.437
 print(paste("Variance:", var(y))) # Variance = 525.528
 print(paste("No. of 0s:", sum(y == 0)))
 print(paste("No. of non 0s:", sum(y != 0)))
-non_numeric_rows <- y[!complete.cases(y) & !sapply(y, is.numeric), ]
 print('Y Value Counts:')
 print(table(y))
 y_bar <- barplot(table(y))
+print(paste('No. of rows =', length(y)))
 # Obs. 
 #   * Since variance >> mean, it's likely that data 
 #     is over-dispersed. However, this needs to be 
