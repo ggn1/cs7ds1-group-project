@@ -6,11 +6,11 @@ library(partykit)
 
 # GETTING DATA
 
-# Set workinf directory to this one.
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project")
+# Set working directory to this one.
+setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
 
 # Load and view data.
-data <- read.csv("Data/aviation_data.csv", header=TRUE, sep= ",")
+data <- read.csv("../Data/aviation_data.csv", header=TRUE, sep= ",")
 str(data)
 
 # Extract useful features only and view the data.
