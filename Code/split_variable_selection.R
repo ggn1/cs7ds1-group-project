@@ -103,24 +103,18 @@ covariates <- get_cat_con(school_absences)
 split_variable <- NA
 
 # 1. Fit model [options = 
-#     p (poisson), zip (zero inflated poisson zip),
-#     nb (negative binomial), zinb (zero inflated negative binomial)
-#     hp (hurdle poisson), hnb (hurdle negative binomial)
+#     p (poisson), 
+#     zip (zero inflated poisson zip),
+#     nb (negative binomial), 
+#     zinb (zero inflated negative binomial),
+#     hp (hurdle poisson), 
+#     hnb (hurdle negative binomial)
 #    ]
-model_type <- "zip"
+model_type <- "p"
 m <- fit_model(model_type)
 
-# 2. Get partial score residuals. ???
-part_score_res <- as.data.frame(residuals(
-  m, model="count", type = "partial"
-))
-
-# Calculate residuals for the count component
-count_residuals <- residuals(model, model='zero', type = "partial")
-
-# Calculate residuals for the zero-inflation component
-residuals <- residuals(model, type = "pearson")
-
+# 2. Get partial score residuals.
+part_score_res <- as.data.frame(residuals(m, type = "partial"))
 
 # 3. Procedure 1
 print("Performing procedure 1 ...")
@@ -216,6 +210,7 @@ if (!is.na(arg_max)) {
   print("Split variable not found.")
 }
 
+# TO DO ...
 
 # 6. If a split variable was not found, 
 #    move on to procedure 2.
