@@ -1,0 +1,2 @@
+Y = absences
+X = [course, school, sex, age, address, famsize, Medu, Fedu, Mjob, Fjob, guardian, traveltime, studytime, failures, schoolsup, famsup, activities, higher, internet, romantic, famrel, freetime, goout, Dalc, Walc, health, G3]

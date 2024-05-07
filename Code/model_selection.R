@@ -9,7 +9,7 @@ library(caret) # For cross validation.
 
 ### Utility Functions
 mse <- function(y, y_pred) {
-  # Computes mean squared error given.
+  # Computes mean squared error.
   # @param y: Truth.
   # @param y_pred: Predictions.
   # @return: Mean of squared residuals.
@@ -25,8 +25,8 @@ cv10fold <- function(model_type, data) {
   # @param data: Data to perform 10 fold cv using.
   # @return: Average of MSE values across 10 folds.
   res_cv = mean(as.numeric(lapply(folds, function(index_validate) {
-    fold_train = data_train[-index_validate, ]
-    fold_validate = data_train[index_validate, ]
+    fold_train <- data_train[-index_validate, ]
+    fold_validate <- data_train[index_validate, ]
     if (model_type == 'poisson') {
       model <- glm(Total.Uninjured ~ ., data=fold_train, family="poisson")
     } else if (model_type == 'negbin') {
@@ -93,5 +93,3 @@ get_best_model <- function(data) {
   return(model_best)
 }
 best_model <- get_best_model()
-
-

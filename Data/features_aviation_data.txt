@@ -1,2 +1,0 @@
-Y = Total.Uninjured
-X = [Injury.Severity, Aircraft.damage, Aircraft.Category, Amateur.Built, Number.of.Engines, Engine.Type, Weather.Condition, Broad.phase.of.flight]
