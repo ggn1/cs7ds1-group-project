@@ -1,0 +1,7 @@
+famsize - "LE3" label encoded as 0 and "GT3" label encoded as 1
+internet - "yes" label encoded as 1 and "no" label encoded as 0
+romantic - "yes" label encoded as 1 and "no" label encoded as 0
+higher - "yes" label encoded as 1 and "no" label encoded as 0
+activities - "yes" label encoded as 1 and "no" label encoded as 0
+famsup - "yes" label encoded as 1 and "no" label encoded as 0
+schoolsup - "yes" label encoded as 1 and "no" label encoded as 0
