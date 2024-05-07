@@ -18,6 +18,8 @@ Y <- unlist(data["absences"])
 # Calculate data variance
 data_var <- var(Y)
 
+y_bar <- barplot(table(Y), xlab='absences', ylab='Frequency')
+
 # Test for over-dispersion in Poisson
 dist <- fitdistr(Y, densfun="poisson")
 expect_var <- dist$estimate["lambda"]
