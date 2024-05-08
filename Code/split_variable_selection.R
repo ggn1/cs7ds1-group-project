@@ -9,6 +9,8 @@ library(MASS) # Poisson and negative binomial models.
 library(caret) # For cross validation.
 library(readr)
 library(stats)
+library(pscl)
+library(ggeffects)
 
 # Set working directory to this one.
 setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
@@ -39,8 +41,10 @@ get_cat_con <- function(data) {
   return(covariates)
 }
 
-fit_model <- function(model_type) {
+fit_model <- function(model_type, formula_str) {
   ### Given a model type, fits it to the data.  
+  ### @param formula_str: The model formula as a string.
+  ### @param data: Data which the model with fit.
   ### @param model_type: The type of model to be
   ###                    fitted. Options are as follows.
   ###                    * p (poisson)
@@ -49,47 +53,151 @@ fit_model <- function(model_type) {
   ###                    * zinb (zero inflated negative binomial)
   ###                    * hp (hurdle poisson)
   ###                    * hnb (hurdle negative binomial)
-  ### @return model: Fitted model.
-  model = NA
+  ### @return m: Fitted model.
+  m = NA
   if (model_type == 'p') { # POISSON MODEL
-    model <- glm(
-      absences ~ ., 
+    m <- glm(
+      as.formula(formula_str), 
       data=school_absences, 
       family="poisson"
     )
   } else if (model_type == 'nb') { # NEGATIVE BINOMIAL MODEL
-    model <- glm.nb(
-      absences ~ ., 
+    m <- glm.nb(
+      as.formula(formula_str), 
       data=school_absences
     )
   } else if (model_type == 'zip') { # ZERO INFLATED POISSON MODEL
-    model <- zeroinfl(
-      absences ~ ., 
+    m <- zeroinfl(
+      as.formula(formula_str), 
       data=school_absences, 
       dist="poisson"
     )
   } else if (model_type == 'zinb') { # ZERO INFLATED NEGATIVE BINOMIAL MODEL
-    model <- zeroinfl(
-      absences ~ ., 
+    m <- zeroinfl(
+      as.formula(formula_str), 
       data=school_absences, 
       dist="negbin"
     )
   } else if (model_type == 'hp') { # POISSON HURDLE MODEL
-    model <- hurdle(
-      absences ~ ., 
+    m <- hurdle(
+      as.formula(formula_str), 
       data=school_absences, 
       dist="poisson"
     )
   } else if (model_type == 'hnb') { # NEGATIVE BINOMIAL HURDLE MODEL
-    model <- hurdle(
-      absences ~ ., 
-      data=school_absences, 
+    m <- hurdle(
+      as.formula(formula_str), 
+      data=school_absences,
       dist="negbin"
     )
   } else {
     stop("Invalid model type.")
   }
-  return(model)
+  return(m)
+}
+
+compute_partial_residuals <- function(m, model_type) {
+  ### Computes and returns partial residuals.
+  ### @param m: The model whose partial residuals
+  ###           need to be obtained.
+  ### @param model_type: The type of given model which
+  ###                    could be any one of 
+  ###                    [p, nb, zip, zinb, hp, hnb].
+  ### @return partial_residuals: A hash map with 2 keys
+  ###                            being "count" and "zero"
+  ###                            such that "count" corresponds
+  ###                            to a data frame containing
+  ###                            count data related residuals
+  ###                            and "zero" corresponds 
+  ###                            to a data frame containing
+  ###                            residuals related to zero
+  ###                            counts if applicable.
+  
+  # Get the names of the predictor variables.
+  predictor_names <- names(data)[-1]
+  
+  # Initialize a list to store partial residuals 
+  # for each predictor.
+  partial_residuals <- hash()
+  partial_residuals[['count']] <- list()
+  partial_residuals[['zero']] <- list()
+  
+  # Get truth values for school absences.
+  truth_count <- school_absences$absences
+  truth_zero <- as.numeric(
+    ifelse(school_absences$absences == 0, 1, 0)
+  )
+  
+  # Get residuals with full model.
+  predictions_count_original <- predict(m, type="response")
+  residuals_count_original <- (
+    predictions_count_original - truth_count
+  )
+  
+  predictions_zero_original <- list()
+  residuals_zero_original <- list()
+  if (
+    model_type == "zip" || 
+    model_type == "zinb" ||
+    model_type == "hp" ||
+    model_type == "hnb"
+  ) {
+    predictions_zero_original <- predict(m, type="zero")
+    residuals_zero_original <- (
+      predictions_zero_original - truth_zero
+    )
+  }
+  
+  # Iterate over each predictor variable.
+  for (predictor in predictor_names) {
+    
+    # Create reduced model formula that 
+    # forces the model to be consider all
+    # predictors except the one we're currently
+    # interested in.
+    formula_reduced_str <- paste(
+      "absences ~ . - ", predictor
+    )
+    
+    # Fit the reduced model
+    m_reduced <- fit_model(
+      model_type = model_type,
+      formula_str = formula_reduced_str
+    )
+    
+    # Compute and store partial residuals of the 
+    # count component.
+    predictions_count_reduced <- predict(
+      m_reduced, type="response"
+    )
+    residuals_count_reduced <- (
+      predictions_count_reduced - truth_count
+    )
+    partial_residual_count <- (
+      residuals_count_original - residuals_count_reduced
+    )
+    partial_residuals[['count']][[predictor]] <- partial_residual_count
+    
+    # Compute and store partial residuals of the 
+    # zero component.
+    if (length(residuals_zero_original) > 0) {
+      predictions_zero_reduced = predict(
+        m_reduced, type="zero"
+      )
+      residuals_zero_reduced = (
+        predictions_zero_reduced - truth_zero
+      )
+      partial_residual_zero = (
+        residuals_zero_original - residuals_zero_reduced
+      )
+      partial_residuals[['zero']][[predictor]] <- partial_residual_zero
+    }
+  }
+  
+  partial_residuals[['count']] <- data.frame(partial_residuals[['count']])
+  partial_residuals[['zero']] <- data.frame(partial_residuals[['zero']])
+  
+  return(partial_residuals)
 }
 
 # LOAD DATA
@@ -110,11 +218,17 @@ split_variable <- NA
 #     hp (hurdle poisson), 
 #     hnb (hurdle negative binomial)
 #    ]
-model_type <- "p"
-m <- fit_model(model_type)
+model_type <- "hnb"
+m <- fit_model(
+  model_type = model_type, 
+  formula_str = "absences ~ ."
+)
 
 # 2. Get partial score residuals.
-part_score_res <- as.data.frame(residuals(m, type = "partial"))
+# partial_residuals <- as.data.frame(
+#   residuals(m, type = "partial")
+# )
+partial_residuals <- compute_partial_residuals(m, model_type)
 
 # 3. Procedure 1
 print("Performing procedure 1 ...")
@@ -125,35 +239,72 @@ for (covariate_name_type in covariates) {
   covariate_type <- covariate_name_type[[2]]
   
   # 3.1. Get specific partial scores.
-  part_res <- part_score_res[covariate_name][,]
+  part_res_count <- partial_residuals[['count']][covariate_name][,]
+  part_res_zero <- list()
+  if (length(partial_residuals[['zero']])>0) {
+    part_res_zero <- partial_residuals[['zero']][covariate_name][,]
+  }
   
   # 3.2. Group by signs of the residuals.
   #      0 => < 0
   #      1 => >= 0
-  part_res_sign <- rep(1, times=length(part_res))
-  part_res_sign[which(part_res < 0)] = 0
+  part_res_count_groups <- rep(
+    1, times=length(part_res_count)
+  )
+  part_res_count_groups[
+    which(part_res_count < 0)
+  ] = 0
+  part_res_count_groups <- factor(
+    part_res_count_groups
+  )
+  part_res_zero_groups <- NA
+  if (length(part_res_zero) > 0) {
+    part_res_zero_groups <- rep(
+      1, times=length(part_res_count)
+    )
+    part_res_zero_groups[which(part_res_zero < 0)] = 0
+  }
 
   # 3.3. If the covariate is not categorical, 
   #      group by quartiles else, group by categories.
-  groups <- NA
+  covariate_data <- school_absences[covariate_name][,]
+  covariate_data_groups <- NA
   if (covariate_type == "con") {
-    five_num_sum <- fivenum(part_res)
+    five_num_sum <- fivenum(covariate_data)
     q1 <- five_num_sum[1]
     q2 <- five_num_sum[2]
     q3 <- five_num_sum[3]
-    quartile_group <- rep(4, times=length(part_res))
-    quartile_group[which(part_res <= q3)] = 3
-    quartile_group[which(part_res <= q2)] = 2
-    quartile_group[which(part_res <= q1)] = 1
-    groups <- factor(quartile_group)
+    quartile_group <- rep(
+      4, times=length(covariate_data)
+    )
+    quartile_group[which(covariate_data <= q3)] = 3
+    quartile_group[which(covariate_data <= q2)] = 2
+    quartile_group[which(covariate_data <= q1)] = 1
+    covariate_data_groups <- factor(quartile_group)
   } else {
-    groups <- factor(school_absences[covariate_name][,])
+    covariate_data_groups <- factor(covariate_data)
   }
   
   # 3.4. Create a contingency table with
   #      residual signs as rows and groups 
   #      as columns.
-  contingency_table <- table(factor(part_res_sign), groups)
+  contingency_table = NA
+  if ( # For normal count models.
+    model_type == "p" ||
+    model_type == "nb"
+  ) {
+    contingency_table <- table(
+      part_res_count_groups,
+      covariate_data_groups
+    )
+  } else { # For zero inflated or hurdle models.
+    contingency_table <- table(
+      paste0(
+        part_res_count_groups, 
+        part_res_zero_groups
+      ), covariate_data_groups
+    )
+  }
 
   # 3.5. Drop entries where column total == 0.
   column_totals <- margin.table(
@@ -210,15 +361,14 @@ if (!is.na(arg_max)) {
   print("Split variable not found.")
 }
 
-# TO DO ...
-
 # 6. If a split variable was not found, 
 #    move on to procedure 2.
 if (is.na(split_variable)) {
+  print("Performing procedure 2 ...")
   
+  # TO DO ...
+  
+  print("Procedure 2 complete.")
 }
 
-print("Procedure 1 complete.")
 
-# PROCEDURE 2
-# TO DO ...

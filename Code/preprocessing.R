@@ -1,9 +1,7 @@
 # Import libraries.
-library(rpart)
 library(dplyr)
 library(caret) # For label encoding.
 library(ggplot2)
-library(partykit)
 
 # GETTING DATA
 
@@ -56,20 +54,20 @@ print(paste('No. of rows =', length(data$absences)))
 #   * Since variance >> mean, it's likely that data 
 #     is over-dispersed.
 
-# LABEL ENCODING
-# Ordinal categorical variables can be label encoded
-# to reflect their order in an ascending manner as
-# 0, 1, 2, ...
-data$famsize <- ifelse(data$famsize == "LE3", 0, 1)
-# Binary variables can be label encoded such that
-# presence of something ("yes") is 1 and 
-# absence of it ("no") is 0.
-data$internet <- ifelse(data$internet == "yes", 1, 0)
-data$romantic <- ifelse(data$romantic == "yes", 1, 0)
-data$higher <- ifelse(data$higher == "yes", 1, 0)
-data$activities <- ifelse(data$activities == "yes", 1, 0)
-data$famsup <- ifelse(data$famsup == "yes", 1, 0)
-data$schoolsup <- ifelse(data$schoolsup == "yes", 1, 0)
+# # LABEL ENCODING
+# # Ordinal categorical variables can be label encoded
+# # to reflect their order in an ascending manner as
+# # 0, 1, 2, ...
+# data$famsize <- ifelse(data$famsize == "LE3", 0, 1)
+# # Binary variables can be label encoded such that
+# # presence of something ("yes") is 1 and 
+# # absence of it ("no") is 0.
+# data$internet <- ifelse(data$internet == "yes", 1, 0)
+# data$romantic <- ifelse(data$romantic == "yes", 1, 0)
+# data$higher <- ifelse(data$higher == "yes", 1, 0)
+# data$activities <- ifelse(data$activities == "yes", 1, 0)
+# data$famsup <- ifelse(data$famsup == "yes", 1, 0)
+# data$schoolsup <- ifelse(data$schoolsup == "yes", 1, 0)
 
 # # Save cleaned data.
 # write.csv(data, file = "./data_clean.csv", row.names = FALSE)
