@@ -107,11 +107,7 @@ cv10fold <- function(
         response_variable = response_variable
       )
       y <- fold_validate[response_variable][,]
-      y_pred <- predict(
-        m, 
-        newdata=fold_validate, 
-        type="response"
-      )
+      y_pred <- predict(m, newdata=fold_validate)
       error <- mse(y, y_pred)
       return(error)
     }
