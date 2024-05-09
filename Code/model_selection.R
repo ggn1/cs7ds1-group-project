@@ -1,13 +1,9 @@
-# Import libraries.
-library(rpart)
-library(dplyr)
-library(ggplot2) # CART
-library(partykit) # CART
-library(pscl) # Zero inflated poisson model.
-library(MASS) # Poisson and negative binomial models.
-library(caret) # For cross validation.
+# LOAD PACKAGES
+require(pscl) # Zero inflated poisson model.
+require(MASS) # Poisson and negative binomial models.
+require(caret) # For cross validation.
 
-### Utility Functions
+# HELPER FUNCTIONS
 mse <- function(y, y_pred) {
   # Computes mean squared error.
   # @param y: Truth.
@@ -19,77 +15,153 @@ mse <- function(y, y_pred) {
   return(mse)
 }
 
-cv10fold <- function(model_type, data) {
-  # Returns average MSE after 10 fold cross validation.
-  # @param model_type: Name of the type of model to use.
-  # @param data: Data to perform 10 fold cv using.
-  # @return: Average of MSE values across 10 folds.
-  res_cv = mean(as.numeric(lapply(folds, function(index_validate) {
-    fold_train <- data_train[-index_validate, ]
-    fold_validate <- data_train[index_validate, ]
-    if (model_type == 'poisson') {
-      model <- glm(Total.Uninjured ~ ., data=fold_train, family="poisson")
-    } else if (model_type == 'negbin') {
-      model <- glm.nb(Total.Uninjured ~ ., data=fold_train)
-    } else if (model_type == 'zip') {
-      model <- zeroinfl(Total.Uninjured ~ ., data=fold_train, dist="poisson")
-    } else if (model_type == 'znib') {
-      model <- zeroinfl(Total.Uninjured ~ ., data=fold_train, dist="negbin")
-    } else if (model_type == 'hurdle_p') {
-      model <- zeroinfl(Total.Uninjured ~ ., data=fold_train, dist="negbin")
-    } else if (model_type == 'hurdle_negbin') {
-      model <- hurdle(Total.Uninjured ~ ., data = data, dist = "negbin")
-    } else { # Invalid model.
-      return (-1)
+fit_model <- function(
+    model_type, data, response_variable
+) {
+  ### Given a model type, fits it to the data.  
+  ### @param response_variable: Name of response variable
+  ###                           in given data.
+  ### @param data: Data which the model with fit.
+  ### @param model_type: The type of model to be
+  ###                    fitted. Options are as follows.
+  ###                    * p (poisson)
+  ###                    * zip (zero inflated poisson zip)
+  ###                    * nb (negative binomial)
+  ###                    * zinb (zero inflated negative binomial)
+  ###                    * hp (hurdle poisson)
+  ###                    * hnb (hurdle negative binomial)
+  ### @return m: Fitted model.
+  m = NA
+  formula_str <- paste(response_variable, " ~ .")
+  # POISSON MODEL
+  if (model_type == 'p') {
+    m <- glm(
+      as.formula(formula_str), 
+      data=data, 
+      family="poisson"
+    )
+  } 
+  # NEGATIVE BINOMIAL MODEL
+  else if (model_type == 'nb') {
+    m <- glm.nb(
+      as.formula(formula_str), 
+      data=data
+    )
+  } 
+  # ZERO INFLATED POISSON MODEL
+  else if (model_type == 'zip') { 
+    m <- zeroinfl(
+      as.formula(formula_str), 
+      data=data, 
+      dist="poisson"
+    )
+  } 
+  # ZERO INFLATED NEGATIVE BINOMIAL MODEL
+  else if (model_type == 'zinb') { 
+    m <- zeroinfl(
+      as.formula(formula_str), 
+      data=data, 
+      dist="negbin"
+    )
+  } 
+  # POISSON HURDLE MODEL
+  else if (model_type == 'hp') {
+    m <- hurdle(
+      as.formula(formula_str), 
+      data=data, 
+      dist="poisson"
+    )
+  } 
+  # NEGATIVE BINOMIAL HURDLE MODEL
+  else if (model_type == 'hnb') {
+    m <- hurdle(
+      as.formula(formula_str), 
+      data=data,
+      dist="negbin"
+    )
+  } 
+  else {
+    stop("Invalid model type.")
+  }
+  return(m)
+}
+
+cv10fold <- function(
+    model_type, data, response_variable
+) {
+  ### Returns average MSE after 10 fold cross validation.
+  ### @param response_variable: Variable to predict.
+  ### @param model_type: Code of the type of 
+  ###                    model to use.
+  ### @param data: Data to perform 10 fold CV using.
+  ### @return: Average of MSE values across 10 folds.
+  folds <- 10
+  res_cv = mean(as.numeric(lapply(
+    folds, function(index_validate) {
+      fold_train <- data[-index_validate, ]
+      fold_validate <- data[index_validate, ]
+      m <- fit_model(
+        model_type = model_type,
+        data = fold_train,
+        response_variable = response_variable
+      )
+      y <- fold_validate[response_variable][,]
+      y_pred <- predict(
+        m, newdata=fold_validate, 
+        type = "response"
+      )
+      error <- mse(y, y_pred)
+      return(error)
     }
-    y <- fold_train$Total.Uninjured
-    y_pred <- predict(model, newdata=fold_train, type="response")
-    error <- mse(y, y_pred)
-    return(error)
-  }))) # Cross validation result.
+  ))) # Cross validation result.
+  
   return(res_cv)
 }
 
-### Main
+# MODEL SELECTION
+get_best_model <- function(data, response_variable) {
+  ### Returns best model. The best model is the
+  ### one that resulted in lowest MSE after
+  ### 10 fold cross validation (CV).
+  ### @param data: Input data set.
+  ### @param response_variable: Variable to predict.
+  ### @return: Code indicating best model so identified.
+  print('Determining best model through 10 Fold CV ...')
+  model_types <- list(
+    'p', 'nb', 'zip', 'zinb', 'hp', 'hnb'
+  )
+  res_cv <- list()
+  for (model_type in model_types) {
+    res_cv <- append(res_cv, cv10fold(
+      model_type = model_type, data = data, 
+      response_variable = response_variable
+    ))
+    print(paste('Evaluated model:', model_type))
+  }
+  model_best <- model_types[which.min(res_cv)]
+  print(paste(
+    'Model resulting in lowest avg.',
+    'MSE across 10 folds =', model_best
+  ))
+  return(model_best)
+}
+
+# MAIN
 
 # Set working directory to this one.
 setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
 
 # Load data.
-data <- read.csv("../Data/data_clean.csv", header=TRUE, sep=",")
+school_absences <- read.csv(
+  "../Data/data_clean.csv", 
+  header=TRUE, sep=","
+)
+response_variable <- "absences"
 
-# 1. Poisson Model
-model_poisson <- glm(Total.Uninjured ~ ., data=data, family="poisson")
+# Get best model.
+model_type <- get_best_model(
+  data = school_absences,
+  response_variable = response_variable
+)
 
-# 2. Negative Binomial Model
-model_negbin <- glm.nb(Total.Uninjured ~ ., data=data)
 
-# 3. Zero-Inflated Models
-model_zip <- zeroinfl(Total.Uninjured ~ ., data=data, dist="poisson")
-model_zinb <- zeroinfl(Total.Uninjured ~ ., data=data, dist="negbin")
-
-# 4. Hurdle Model
-model_hurdle_p <- hurdle(Total.Uninjured ~ ., data=data, dist="poisson")
-model_hurdle_nb <- hurdle(Total.Uninjured ~ ., data=data, dist="negbin")
-
-### 10 Fold Cross validation.
-
-# 1. Train - test split.
-index_train <- createDataPartition(data$Total.Uninjured, p = 0.8, list = FALSE)
-data_train <- data[index_train, ]
-data_test <- data[-index_train, ]
-
-# 2. Create 10 folds of the train data set.
-get_best_model <- function(data) {
-  print('Determining best model through 10 Fold CV.')
-  model_types <- list('poisson', 'negbin', 'zip', 'zinb', 'hurdle_p', 'hurdle_negbin')
-  res_cv <- list()
-  for (model_type in model_types) {
-    res_cv <- append(res_cv, cv10fold(model_type, data))
-    print(paste('Evaluated model:', model_type))
-  }
-  model_best <- model_types[which.min(res_cv)]
-  print(paste('Model resulting in lowest avg. MSE across 10 folds =', model_best))
-  return(model_best)
-}
-best_model <- get_best_model()
