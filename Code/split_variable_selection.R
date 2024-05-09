@@ -111,16 +111,20 @@ compute_residual <- function(
   
   # Get predictions.
   predictions <- hash()
-  predictions[['count']] <- predict(
-    m, type="response", newdata = data
-  )
-  predictions[['zero']] <- list()
-  if (
-    model_type == 'zip' ||
-    model_type == 'zinb' ||
-    model_type == 'hp' ||
-    model_type == 'hnb'
-  ) {
+  if (model_type == 'p' || model_type == "nb") {
+    predictions[['count']] <- predict(
+      m, type="response", newdata = data
+    )
+    predictions[['zero']] <- list()
+  } 
+  # model_type == 'zip' || 
+  # model_type == 'zinb' ||
+  # model_type == 'hp' || 
+  # model_type == 'hnb'
+  else {
+    predictions[['count']] <- predict(
+      m, type="count", newdata = data
+    )
     predictions[['zero']] <- predict(
       m, type="zero", newdata = data
     )
@@ -637,7 +641,7 @@ school_absences <- read.csv(
 split_variable <- get_split_variable(
   data = school_absences, 
   response_variable = "absences",
-  model_type = "hnb"
+  model_type = "zip"
 )
 
 

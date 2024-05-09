@@ -107,7 +107,10 @@ cv10fold <- function(
         response_variable = response_variable
       )
       y <- fold_validate[response_variable][,]
-      y_pred <- predict(m, newdata=fold_validate)
+      y_pred <- predict(
+        m, newdata=fold_validate, 
+        type = "response"
+      )
       error <- mse(y, y_pred)
       return(error)
     }
@@ -164,16 +167,20 @@ compute_residual <- function(
   
   # Get predictions.
   predictions <- hash()
-  predictions[['count']] <- predict(
-    m, type="response", newdata = data
-  )
-  predictions[['zero']] <- list()
-  if (
-    model_type == 'zip' ||
-    model_type == 'zinb' ||
-    model_type == 'hp' ||
-    model_type == 'hnb'
-  ) {
+  if (model_type == 'p' || model_type == "nb") {
+    predictions[['count']] <- predict(
+      m, type="response", newdata = data
+    )
+    predictions[['zero']] <- list()
+  } 
+  # model_type == 'zip' || 
+  # model_type == 'zinb' ||
+  # model_type == 'hp' || 
+  # model_type == 'hnb'
+  else {
+    predictions[['count']] <- predict(
+      m, type="count", newdata = data
+    )
     predictions[['zero']] <- predict(
       m, type="zero", newdata = data
     )
