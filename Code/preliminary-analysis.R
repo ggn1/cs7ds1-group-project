@@ -4,6 +4,7 @@ library(glmmTMB)
 library(performance)
 library(fitdistrplus)
 
+
 # Set working directory as directory of the R script
 # -> so we don't need to manually set the path of the data
 current_path = rstudioapi::getActiveDocumentContext()$path 
@@ -13,12 +14,16 @@ print( getwd() )
 
 # Load data.
 data <- read.csv("../Data/student-mat-por.csv", header=TRUE, sep= ",")
+
+# Drop variables to be excluded
+data <- subset(data, select = -c(reason, paid, nursery, Pstatus, G1, G2))
 Y <- unlist(data["absences"])
 
 # Calculate data variance
 data_var <- var(Y)
 
-y_bar <- barplot(table(Y), xlab='absences', ylab='Frequency')
+barplot(table(Y), xlab='absences', ylab='Frequency')
+hist(Y, xlab='absences', ylab='Frequency', breaks=50, main="")
 
 # Test for over-dispersion in Poisson
 dist <- fitdistr(Y, densfun="poisson")
@@ -41,3 +46,4 @@ if(data_var > expect_var){print("Model is over-dispersed")}else{print("Model is 
 # Test for zero-inflation in Negative Binomial
 m <- glm.nb(absences ~ ., data = data)
 check_zeroinflation(m)
+check_overdispersion(m)
