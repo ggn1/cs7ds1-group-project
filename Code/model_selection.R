@@ -4,17 +4,6 @@ require(MASS) # Poisson and negative binomial models.
 require(caret) # For cross validation.
 
 # HELPER FUNCTIONS
-mse <- function(y, y_pred) {
-  # Computes mean squared error.
-  # @param y: Truth.
-  # @param y_pred: Predictions.
-  # @return: Mean of squared residuals.
-  residuals <- y - y_pred
-  squared_error <- residuals^2
-  mse <- mean(squared_error)
-  return(mse)
-}
-
 fit_model <- function(
     model_type, data, response_variable
 ) {
@@ -96,26 +85,39 @@ cv10fold <- function(
   ### @param data: Data to perform 10 fold CV using.
   ### @return: Average of MSE values across 10 folds.
   folds <- 10
-  res_cv = mean(as.numeric(lapply(
-    folds, function(index_validate) {
-      fold_train <- data[-index_validate, ]
-      fold_validate <- data[index_validate, ]
-      m <- fit_model(
-        model_type = model_type,
-        data = fold_train,
-        response_variable = response_variable
-      )
-      y <- fold_validate[response_variable][,]
-      y_pred <- predict(
-        m, newdata=fold_validate, 
-        type = "response"
-      )
-      error <- mse(y, y_pred)
-      return(error)
-    }
-  ))) # Cross validation result.
+  n <- nrow(data)
+  fold_indices <- cut(1:n, breaks = folds, labels = FALSE)
   
-  return(res_cv)
+  # Initialize for accumulating errors.
+  total_error <- 0
+  
+  for (i in 1:folds) {
+    fold_train <- data[fold_indices != i,]
+    fold_validate <- data[fold_indices == i,]
+    
+    # Fit model on train set.
+    m <- fit_model(
+      model_type = model_type,
+      data = fold_train,
+      response_variable = response_variable
+    )
+    
+    # Make predictions on validation set.
+    y <- fold_validate[[response_variable]]
+    y_pred <- predict(
+      m, newdata = fold_validate, 
+      type = "response"
+    )
+    
+    # Calculate squared error.
+    error <- sum((y - y_pred)^2)
+    total_error <- total_error + error
+  }
+  
+  # Calculate and return mean squared error (MSE).
+  mse <- total_error / n
+  
+  return(mse)
 }
 
 # MODEL SELECTION
