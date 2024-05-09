@@ -1,2 +1,2 @@
-Y = Total.Uninjured
-X = [Injury.Severity, Aircraft.damage, Aircraft.Category, Amateur.Built, Number.of.Engines, Engine.Type, Weather.Condition, Broad.phase.of.flight]
+Y = absences
+X = [course, school, sex, age, address, famsize, Medu, Fedu, Mjob, Fjob, guardian, traveltime, studytime, failures, schoolsup, famsup, activities, higher, internet, romantic, famrel, freetime, goout, Dalc, Walc, health, G3]
