@@ -1,12 +1,9 @@
-# Import libraries.
-library(hash) # For hash map data structure.
-library(pscl) # Zero inflated poisson model.
-library(MASS) # Poisson and negative binomial models.
+# LOAD PACKAGES
+require(hash) # For hash map data structure.
+require(pscl) # Zero inflated poisson model.
+require(MASS) # Poisson and negative binomial models.
 
-# Set working directory to this one.
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
-
-# UTILITY FUNCTIONS
+# HELPER FUNCTIONS
 get_cat_con <- function(data, response_variable) {
   ### Computes whether each column in the data set is
   ### categorical or non-categorical in nature.
@@ -626,10 +623,17 @@ get_split_variable <- function(
 }
 
 # MAIN
+
+# Set working directory to this one.
+setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+
+# Load data set.
 school_absences <- read.csv(
   "../Data/data_clean.csv", 
   header=TRUE, sep=","
 )
+
+# Perform split variable selection.
 split_variable <- get_split_variable(
   data = school_absences, 
   response_variable = "absences",
