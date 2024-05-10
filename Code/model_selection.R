@@ -3,8 +3,12 @@ require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
 require(caret) # For cross validation.
 
-# SET WORKING DIRECTORY
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+# AUTOMATICALLY SET WORKING DIRECTORY
+library(rstudioapi)
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print( getwd() )
 
 # HELPER FUNCTIONS
 source("./helper_functions.R")
