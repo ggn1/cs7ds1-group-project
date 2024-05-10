@@ -98,6 +98,12 @@ get_best_model <- function(data, response_variable) {
       '(mse =', mse, ")" 
     ))
   }
+  #if(min(unlist(res_cv)) == Inf){
+  #  model_best <- NULL
+  #}
+  #else{
+  #  model_best <- model_types[which.min(res_cv)]
+  #}
   model_best <- model_types[which.min(res_cv)]
   print(paste(
     'Model resulting in lowest avg.',
