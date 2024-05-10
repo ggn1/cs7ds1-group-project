@@ -51,6 +51,12 @@ fit_model <- function(
   m = NA
   formula_str <- paste(response_variable, " ~ .")
   
+  
+  # Drop factors that only have one level
+  cols_unique <- sapply(data, function(x) length(unique(x))) > 1
+  data <- data[names(cols_unique[cols_unique])]
+  #print(data)
+  
   # POISSON MODEL
   if (model_type == 'p') {
     m <- glm(

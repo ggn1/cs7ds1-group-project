@@ -15,7 +15,7 @@ print( getwd() )
 source("./helper_functions.R")
 
 can_consider_split <- function(
-    responses_left, responses_right
+    data_left, data_right
 ) {
   ### Returns whether or not this split set is to be
   ### considered at all. If a split results in 
@@ -29,13 +29,51 @@ can_consider_split <- function(
   ### @return: TRUE if this set can be considered and
   ###          FALSE otherwise.
   
+  #print(data_left)
   # As in papaer.
   if (
-    (sum(responses_left) == 0) && (0 %in% responses_right) ||
-    (sum(responses_right) == 0) && (0 %in% responses_left)
+    (sum(data_left[[RESPONSE_VARIABLE]]) == 0) && (0 %in% data_right[[RESPONSE_VARIABLE]]) ||
+    (sum(data_right[[RESPONSE_VARIABLE]]) == 0) && (0 %in% data_left[[RESPONSE_VARIABLE]])
   ) {
     return(FALSE)
   }
+  # If splits can't be fit by a model
+  model_types <- list(
+    'p', 'nb', 'zip', 'zinb', 'hp', 'hnb'
+  )
+  
+  # Check is a model can be fit to left data
+  success <- FALSE
+  for (model_type in model_types) {
+    tryCatch({
+      cv10fold(model_type = model_type,
+                data = data_left,
+                response_variable = RESPONSE_VARIABLE)
+      success <- TRUE
+      cat("Left model ", model_type, "\n")
+      break
+    }, error = function(e) {print(e)})
+    }
+  if (!success){
+    return(FALSE)
+  }
+  
+  # Check is a model can be fit to right data
+  success <- FALSE
+  for (model_type in model_types) {
+    tryCatch({
+      cv10fold(model_type = model_type,
+                data = data_right,
+                response_variable = RESPONSE_VARIABLE)
+      success <- TRUE
+      cat("Right model ", model_type, "\n")
+      break
+    }, error = function(e) {print(e)})
+  }
+  if (!success){
+    return(FALSE)
+  }
+  
   return(TRUE)
   
   # # Modified for zero inflated models.
@@ -154,9 +192,10 @@ get_split_set <- function(
       #            in one branch and 1 in the other branch.
       #            Then, ignore this split.
       if (!can_consider_split(
-        data_split[['left']][[response_variable]],
-        data_split[['right']][[response_variable]]
+        data_split[['left']],
+        data_split[['right']]
       )) {
+        cat("Disregarding split ", var_class)
         next # Disregard this set if can't consider.
       }
       
@@ -190,9 +229,10 @@ get_split_set <- function(
       #            in one branch and 1 in the other branch.
       #            Then, ignore this split.
       if (!can_consider_split(
-        data_split[['left']][[response_variable]],
-        data_split[['right']][[response_variable]]
+        data_split[['left']],
+        data_split[['right']]
       )) {
+        cat("Disregarding split ", var_class)
         next # Disregard this set if can't consider.
       }
       
@@ -249,17 +289,17 @@ get_split_set <- function(
 
 # MAIN
 
-# # Load data set.
-# school_absences <- read.csv(
-#   "../Data/data_clean.csv",
-#   header=TRUE, sep=","
-# )
-# 
-# # Split set selection.
-# split_set <- get_split_set(
-#   split_variable = 'famsize',
-#   data = school_absences,
-#   response_variable = 'absences'
-# )
+ # Load data set.
+ school_absences <- read.csv(
+   "../Data/data_clean.csv",
+   header=TRUE, sep=","
+ )
+ 
+ # Split set selection.
+ split_set <- get_split_set(
+   split_variable = 'famsize',
+   data = school_absences,
+   response_variable = 'absences'
+ )
 
 

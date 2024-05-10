@@ -90,7 +90,7 @@ get_best_model <- function(data, response_variable) {
         "Model", model_type, "cannot be fit.",
         "Thus, no longer a candidate for best model."
       ))
-      return(Inf)
+      return(NA)
     })
     res_cv <- append(res_cv, mse)
     print(paste(
@@ -98,13 +98,12 @@ get_best_model <- function(data, response_variable) {
       '(mse =', mse, ")" 
     ))
   }
-  #if(min(unlist(res_cv)) == Inf){
-  #  model_best <- NULL
-  #}
-  #else{
-  #  model_best <- model_types[which.min(res_cv)]
-  #}
-  model_best <- model_types[which.min(res_cv)]
+  if(is.na(min(unlist(res_cv), na.rm=T))){
+    model_best <- NULL
+  }
+  else{
+    model_best <- model_types[which.min(res_cv)]
+  }
   print(paste(
     'Model resulting in lowest avg.',
     'MSE across 10 folds =', model_best

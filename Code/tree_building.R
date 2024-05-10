@@ -78,6 +78,23 @@ create_tree <- function(data, level=0) {
     response_variable = RESPONSE_VARIABLE
   )
   
+  # If no valid split set found then this is terminal node
+  print(split_set)
+  if (is.na(split_set)){
+    print("Considering as terminal node")
+    m <- fit_model(
+      model_type = model_type,
+      data = data,
+      response_variable = response_variable
+    )
+    
+    # Return terminal node.
+    node <- hash()
+    node[["type"]] <- "terminal"
+    node[['data']] <- data
+    return(node)
+  }
+  
   # 5. Split as per best identified criterion.
   # Split the data as per split condition.
   split_var_dtype <- get_cat_con(data[[split_variable]])
