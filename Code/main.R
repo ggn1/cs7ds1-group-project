@@ -3,6 +3,8 @@ require(hash) # For hash map data structure.
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
 require(caret) # For cross validation.
+require(partykit) # MOB models
+require(ggplot2) # Plotting
 
 # HELPER FUNCTIONS
 fit_model <- function(
@@ -902,52 +904,48 @@ results <- data.frame(cbind(mean.results, sd.results))
 results$model <- rownames(results)
 results$id <- 1:nrow(results)
 results
+write.csv(results, "evaluation_results.csv", row.names=FALSE)
 
 # Create plots
 
-# MSE training data
-ggplot(results) +
-  geom_bar( aes(x=reorder(model, id), y=mse.train_mean), stat="identity", fill="darkgray")+
-  geom_errorbar(aes(x=reorder(model, id),
-                    ymin=mse.train_mean-mse.train_sd, 
-                    ymax=mse.train_mean+mse.train_sd), width=.2,
-                position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=mse.train_mean, label = signif(mse.train_mean)), 
-             size=3, alpha=0.7)+ 
-  labs(x = "Model", y = "MSE (train)")
+# MSE
+train <- results[c("model", "id")]
+train$mean <- results$mse.train_mean
+train$sd <- results$mse.train_sd
+train$data <- as.factor("train")
 
-# MSE test data
-ggplot(results) +
-  geom_bar( aes(x=reorder(model, id), y=mse.test_mean), stat="identity", fill="darkgray")+
-  geom_errorbar(aes(x=reorder(model, id),
-                    ymin=mse.test_mean-mse.test_sd, 
-                    ymax=mse.test_mean+mse.test_sd), width=.2,
-                position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=mse.test_mean, label = signif(mse.test_mean)), 
-             size=3, alpha=0.7)+ 
-  labs(x = "Model", y = "MSE (test)")
+test <- results[c("model", "id")]
+test$mean <- results$mse.test_mean
+test$sd <- results$mse.test_sd
+test$data <- as.factor("test")
 
-# MAE training data
-ggplot(results) +
-  geom_bar( aes(x=reorder(model, id), y=mae.train_mean), stat="identity", fill="darkgray")+
-  geom_errorbar(aes(x=reorder(model, id),
-                    ymin=mae.train_mean-mae.train_sd, 
-                    ymax=mae.train_mean+mae.train_sd), width=.2,
-                position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=mae.train_mean/2, label = signif(mae.train_mean)), 
-             size=3, alpha=0.7)+ 
-  labs(x = "Model", y = "MAE (train)")
+ggplot(rbind(train, test)) +
+  geom_bar( aes(x=reorder(model, id), y=mean, fill=data), stat="identity", 
+            position = "dodge")+
+  geom_errorbar(aes(x=reorder(model, id), ymin=mean-sd, ymax=mean+sd, group=data), 
+                width=.2, position=position_dodge(.9)) +
+  labs(x = "Model", y = "MSE")+
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
 
-# MSE test data
-ggplot(results) +
-  geom_bar( aes(x=reorder(model, id), y=mae.test_mean), stat="identity", fill="darkgray")+
-  geom_errorbar(aes(x=reorder(model, id),
-                    ymin=mae.test_mean-mae.test_sd, 
-                    ymax=mae.test_mean+mae.test_sd), width=.2,
-                position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=mae.test_mean/2, label = signif(mae.test_mean)), 
-             size=3, alpha=0.7)+ 
-  labs(x = "Model", y = "MAE (test)")
+
+# MAE
+train <- results[c("model", "id")]
+train$mean <- results$mae.train_mean
+train$sd <- results$mae.train_sd
+train$data <- as.factor("train")
+
+test <- results[c("model", "id")]
+test$mean <- results$mae.test_mean
+test$sd <- results$mae.test_sd
+test$data <- as.factor("test")
+
+ggplot(rbind(train, test)) +
+  geom_bar( aes(x=reorder(model, id), y=mean, fill=data), stat="identity", 
+            position = "dodge")+
+  geom_errorbar(aes(x=reorder(model, id), ymin=mean-sd, ymax=mean+sd, group=data), 
+                width=.2, position=position_dodge(.9)) +
+  labs(x = "Model", y = "MAE")+
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Dispersion
 ggplot(results) +
@@ -956,10 +954,11 @@ ggplot(results) +
                     ymin=dispersion_mean-dispersion_sd, 
                     ymax=dispersion_mean+dispersion_sd), width=.2,
                 position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=dispersion_mean/2, label = signif(dispersion_mean)), 
-             size=3, alpha=0.7)+ 
+  geom_label(aes(x=reorder(model, id), y=dispersion_mean-dispersion_sd, label = signif(dispersion_mean)), 
+             alpha=0.7, nudge_y=-0.4)+ 
   labs(x = "Model", y = "Dispersion")+
-  geom_hline(yintercept=1, color = "red")
+  geom_hline(yintercept=1, color = "red")+
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Zero-inflation
 ggplot(results) +
@@ -968,7 +967,10 @@ ggplot(results) +
                     ymin=expected.zero.ratio_mean-expected.zero.ratio_sd, 
                     ymax=expected.zero.ratio_mean+expected.zero.ratio_sd), width=.2,
                 position=position_dodge(.9)) +
-  geom_label(aes(x=reorder(model, id), y=expected.zero.ratio_mean/2, label = signif(expected.zero.ratio_mean)), 
-             size=3, alpha=0.7)+ 
+  geom_label(aes(x=reorder(model, id), y=expected.zero.ratio_mean-expected.zero.ratio_sd,
+                 label = signif(expected.zero.ratio_mean)), 
+             alpha=0.7, nudge_y=-0.07)+ 
   labs(x = "Model", y = "Ratio expected/oberved zeros")+
-  geom_hline(yintercept=1, color = "red")
+  geom_hline(yintercept=1, color = "red")+
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
+
