@@ -121,7 +121,23 @@ cv10fold <- function(
   return(mse)
 }
 
-get_cat_con <- function(data, response_variable) {
+get_cat_con <- function(values) {
+  ### Given a vector, will return 'cat'
+  ### if the vector contains categorical
+  ### data and 'con' if it contains 
+  ### continuous data.
+  ### @param values: Vector of values.
+  ### @return data_type: Type of data in given vector.
+  ###                    * "cat" = categorical
+  ###                    * "con" = continuous
+  data_type <- 'con'
+  if (is.factor(values) || is.character(values)) {
+    data_type <- 'cat'
+  }
+  return(data_type)
+}
+
+get_cat_con_all <- function(data, response_variable) {
   ### Computes whether each column in the data set is
   ### categorical or non-categorical in nature.
   ### @param data: Data set
@@ -136,14 +152,9 @@ get_cat_con <- function(data, response_variable) {
   for (covariate in names(data)) { # Check each covariate.
     # Skip the response variable.
     if (covariate == response_variable) next 
-    if (
-      is.factor(data[[covariate]]) || 
-      is.character(data[[covariate]])
-    ) { # covariate is categorical
-      covariates[[length(covariates)+1]] <- c(covariate, "cat")
-    } else { # covariate is continuous
-      covariates[[length(covariates)+1]] <- c(covariate, "con")
-    }
+    covariates[[length(covariates)+1]] <- c(
+      covariate, check_cat_con(data[[covariate]])
+    )
   }
   return(covariates)
 }
@@ -341,7 +352,7 @@ get_split_variable <- function(
   split_variable <- NA
   
   # Get covariate (name, type) pairs.
-  cov_name_types <- get_cat_con( 
+  cov_name_types <- get_cat_con_all( 
     data = data,
     response_variable = response_variable
   )
@@ -744,5 +755,7 @@ split_variable <- get_split_variable(
   response_variable = "absences",
   model_type = model_type
 )
+
+
 
 

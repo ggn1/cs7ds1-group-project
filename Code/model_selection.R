@@ -86,7 +86,10 @@ cv10fold <- function(
   ### @return: Average of MSE values across 10 folds.
   folds <- 10
   n <- nrow(data)
-  fold_indices <- cut(1:n, breaks = folds, labels = FALSE)
+  fold_indices <- cut(
+    1:n, breaks = folds, 
+    labels = FALSE
+  )
   
   # Initialize for accumulating errors.
   total_error <- 0
@@ -116,6 +119,7 @@ cv10fold <- function(
   
   # Calculate and return mean squared error (MSE).
   mse <- total_error / n
+  print(paste(model_type, mse))
   
   return(mse)
 }
@@ -166,4 +170,24 @@ model_type <- get_best_model(
   response_variable = response_variable
 )
 
+data <- school_absences
+data$Mjob <- rep("teacher", length(data$Mjob))
 
+# 80/20 Train/Test split.
+index_train <- createDataPartition(
+  school_absences[response_variable][,], 
+  p = 0.8, list = FALSE
+)
+data_train <- school_absences[index_train, ]
+data_test <- school_absences[-index_train, ]
+
+model_type <- get_best_model(
+  data = data_train,
+  response_variable = response_variable
+)
+
+# m <- glm(
+#   as.formula("absences ~ ."), 
+#   data=data, 
+#   family="poisson"
+# )
