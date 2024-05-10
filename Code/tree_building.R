@@ -30,8 +30,15 @@ create_tree <- function(data, level=0) {
   print(paste(
     "Building Tree ( level", level, ")"
   ))
+
   
-  # 1. Check for stopping condition.
+  # 1. Model selection.
+  model_type <- get_best_model(
+    data = data,
+    response_variable = RESPONSE_VARIABLE
+  )
+  
+  # 2. Check for stopping condition.
   # Stop growing if this node has < 5% of
   # the data points in the original data set
   # or if all values in the response variable
@@ -45,14 +52,9 @@ create_tree <- function(data, level=0) {
     node <- hash()
     node[["type"]] <- "terminal"
     node[['data']] <- data
+    node[['model_type']] <- model_type
     return(node)
   }
-  
-  # 2. Model selection.
-  model_type <- get_best_model(
-    data = data,
-    response_variable = RESPONSE_VARIABLE
-  )
   
   # 3. Split variable selection.
   split_variable <- get_split_variable(

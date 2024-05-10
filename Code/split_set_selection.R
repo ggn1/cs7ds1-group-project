@@ -46,41 +46,6 @@ can_consider_split <- function(
   # return(FALSE)
 }
 
-# get_valid_split_data <- function(
-#     data_split, response_variable
-# ) {
-#   ### Returns data splits such that all columns
-#   ### with a single class other than the response
-#   ### variable has been dropped.
-#   ### @param data_split: Data sets corresponding to
-#   ###                    left and right branches as
-#   ###                    a hash map with keys "left"
-#   ###                    and "right".
-#   ### @param response_variable: Variable being predicted.
-#   ### @return: Valid data split with only columns having
-#   ###          at least 2 classes.
-#   single_level_columns <- hash()
-#   single_level_columns[['left']] <- sapply(
-#     data_split[['left']], 
-#     function(x) length(unique(x))
-#   ) == 1
-#   single_level_columns[['left']][[response_variable]] = FALSE
-#   single_level_columns[['right']] <- sapply(
-#     data_split[['right']], 
-#     function(x) length(unique(x))
-#   ) == 1
-#   single_level_columns[['right']][[response_variable]] = FALSE
-#   
-#   data_split_valid <- hash()
-#   data_split_valid[['left']] <- data_split[['left']][
-#     , !single_level_columns[['left']]
-#   ]
-#   data_split_valid[['right']] <- data_split[['right']][
-#     , !single_level_columns[['right']]
-#   ]
-#   return(data_split_valid)
-# }
-
 get_split_deviance_gini <- function(
     responses_parent, responses_left, responses_right
 ) {
@@ -106,6 +71,34 @@ get_split_deviance_gini <- function(
     ((n_right/n_total) * gini_right) 
   )
   return(gini_parent - weighted_gini_children)
+}
+
+get_split_deviance_mse <- function(
+    responses_parent, responses_left, responses_right,
+    truth_parent, truth_left, truth_right
+) {
+  ### Computes weighted MSE of the split condition as follows.
+  ### Weighted MSE(children) = 
+  ###       (n_left / n_total) * MSE(left) 
+  ###       + (n_right / n_total) * MSE(right)
+  ### Deviance = MSE(parent) - Weighted MSE(children)
+  ### @param responses_parent: Responses before split.
+  ### @param responses_left: Responses in the 
+  ###                        left branch.
+  ### @param responses_right: Responses in the 
+  ###                         right branch.
+  # n_total <- length(responses_parent)
+  # n_left <- length(responses_left)
+  # n_right <- length(responses_right)
+  # gini_parent <- Gini(responses_parent)
+  # gini_left <- Gini(responses_left)
+  # gini_right <- Gini(responses_right)
+  # weighted_gini_children <- (
+  #   ((n_left/n_total) * gini_left) + 
+  #     ((n_right/n_total) * gini_right) 
+  # )
+  # return(gini_parent - weighted_gini_children)
+  # TO DO ...
 }
 
 # SPLIT SET SELECTION
