@@ -1,5 +1,6 @@
 ERRORS
 ======
 
-1. Error in if (var_deviance > cur_max) { : 
-  	missing value where TRUE/FALSE needed
+1. Error in assign(i, value, x@.xData) : invalid first argument
+   [SOLUTION] Hash keys should be string.
+2. 

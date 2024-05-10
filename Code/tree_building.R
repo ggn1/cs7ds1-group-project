@@ -67,6 +67,7 @@ create_tree <- function(data, level=0) {
   split_set <- get_split_set(
     split_variable = split_variable,
     data = data,
+    model_type = model_type,
     response_variable = RESPONSE_VARIABLE
   )
   

@@ -2,13 +2,20 @@
 require(hash) # For hash map data structure.
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
-require(DescTools) # For Gini Index.
 
 # SET WORKING DIRECTORY
 setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
 
 # HELPER FUNCTIONS
 source("./helper_functions.R")
+
+mae <- function(predictions, truth) {
+  ### Computes and returns Mean Absolute Error (MAE).
+  ### @param predictions: Some predictions.
+  ### @param truth: Ground truth.
+  ### @return: MAE = mean(abs(predictions - truth))
+  return(mean(abs(predictions - truth)))
+} 
 
 can_consider_split <- function(
     responses_left, responses_right
@@ -46,64 +53,58 @@ can_consider_split <- function(
   # return(FALSE)
 }
 
-get_split_deviance_gini <- function(
-    responses_parent, responses_left, responses_right
+get_split_deviance_mae <- function(
+    model_type, response_variable, 
+    data_parent, data_left, data_right
 ) {
-  ### Computes weighted average Gini impurity of
-  ### the split condition as follows.
-  ### Weighted Gini(children) = 
-  ###       (n_left / n_total) * Gini(left) 
-  ###       + (n_right / n_total) * Gini(right)
-  ### Deviance = Gini(parent) - Weighted Gini(children)
-  ### @param responses_parent: Responses before split.
-  ### @param responses_left: Responses in the 
-  ###                        left branch.
-  ### @param responses_right: Responses in the 
-  ###                         right branch.
-  n_total <- length(responses_parent)
-  n_left <- length(responses_left)
-  n_right <- length(responses_right)
-  gini_parent <- Gini(responses_parent)
-  gini_left <- Gini(responses_left)
-  gini_right <- Gini(responses_right)
-  weighted_gini_children <- (
-    ((n_left/n_total) * gini_left) + 
-    ((n_right/n_total) * gini_right) 
+  ### Computes weighted MAE of the split condition as follows.
+  ### Weighted MAE(children) = 
+  ###       (n_left / n_total) * MAE(left) 
+  ###       + (n_right / n_total) * MAE(right)
+  ### Deviance = MAE(parent) - Weighted MAE(children)
+  ### @param model_type: Type of model used.
+  ### @param response_variable: Variable to be predicted.
+  ### @param data_parent: Data in the parent node.
+  ### @param data_left: Data in the left child.
+  ### @param data_right: Data in the right child.
+  sanitized_data <- sanitize_fit_input(
+    data_check = data_parent,
+    data_apply = list(data_parent, data_left, data_right),
+    response_variable = response_variable
   )
-  return(gini_parent - weighted_gini_children)
-}
+  data_parent <- sanitized_data[[1]]
+  data_left <- sanitized_data[[2]]
+  data_right <- sanitized_data[[3]]
+  m <- fit_model(
+    model_type = model_type,
+    data = data_parent,
+    response_variable = response_variable
+  )
+  pred_parent <- predict(m, newdata=data_parent)
+  pred_left <- predict(m, newdata=data_left)
+  pred_right <- predict(m, newdata=data_right)
+  truth_parent <- data_parent[[response_variable]]
+  truth_left <- data_left[[response_variable]]
+  truth_right <- data_right[[response_variable]]
 
-get_split_deviance_mse <- function(
-    responses_parent, responses_left, responses_right,
-    truth_parent, truth_left, truth_right
-) {
-  ### Computes weighted MSE of the split condition as follows.
-  ### Weighted MSE(children) = 
-  ###       (n_left / n_total) * MSE(left) 
-  ###       + (n_right / n_total) * MSE(right)
-  ### Deviance = MSE(parent) - Weighted MSE(children)
-  ### @param responses_parent: Responses before split.
-  ### @param responses_left: Responses in the 
-  ###                        left branch.
-  ### @param responses_right: Responses in the 
-  ###                         right branch.
-  # n_total <- length(responses_parent)
-  # n_left <- length(responses_left)
-  # n_right <- length(responses_right)
-  # gini_parent <- Gini(responses_parent)
-  # gini_left <- Gini(responses_left)
-  # gini_right <- Gini(responses_right)
-  # weighted_gini_children <- (
-  #   ((n_left/n_total) * gini_left) + 
-  #     ((n_right/n_total) * gini_right) 
-  # )
-  # return(gini_parent - weighted_gini_children)
-  # TO DO ...
+  mae_parent <- mae(pred_parent, truth_parent)
+  mae_left <- mae(pred_left, truth_left)
+  mae_right <- mae(pred_right, truth_right)
+
+  n_total <- length(data_parent)
+  n_left <- length(data_left)
+  n_right <- length(data_right)
+  
+  weighted_mae_children <- (
+      ((n_left/n_total) * mae_left) +
+      ((n_right/n_total) * mae_right)
+  )
+  return(mae_parent - weighted_mae_children)
 }
 
 # SPLIT SET SELECTION
 get_split_set <- function(
-    split_variable, data, response_variable
+    split_variable, data, response_variable, model_type
 ) {
   ### Returns best criterion based on which to split
   ### values in this split variable.
@@ -125,7 +126,6 @@ get_split_set <- function(
   
   # 2. Get deviance scores for all possible 
   #    binary splits of the data.
-  
   split_set_deviance <- hash()
   if (var_type == "cat") {
     # [cat] 2.1. Loop over every possible binary split.
@@ -146,21 +146,30 @@ get_split_set <- function(
         data_split[['left']][[response_variable]],
         data_split[['right']][[response_variable]]
       )) {
-        next # Disregard this set if can't consider.
+        next # Disregard this set if can't be considered.
       }
       
       # [cat] 2.3. Compute and keep track of 
       #            set split deviance.
+      # split_set_deviance[[
+      #   var_class
+      # ]] <- get_split_deviance_gini(
+      #   responses_parent = data[[response_variable]],
+      #   responses_left = data_split[['left']][[
+      #     response_variable
+      #   ]],
+      #   responses_right = data_split[['right']][[
+      #     response_variable
+      #   ]]
+      # )
       split_set_deviance[[
         var_class
-      ]] <- get_split_deviance_gini(
-        responses_parent = data[[response_variable]],
-        responses_left = data_split[['left']][[
-          response_variable
-        ]],
-        responses_right = data_split[['right']][[
-          response_variable
-        ]]
+      ]] <- get_split_deviance_mae(
+        model_type = model_type,
+        response_variable = response_variable,
+        data_parent = data,
+        data_left = data_split[['left']],
+        data_right = data_split[['right']]
       )
     }
   } else { # (variable_type == "con")
@@ -190,21 +199,24 @@ get_split_set <- function(
       
       # split_set_deviance[[
       #   as.character(var_class)
-      # ]] <- get_split_deviance(
-      #   data_split, response_variable, model_type,
-      #   saturated_model_log_likelihood
+      # ]] <- get_split_deviance_gini(
+      #   responses_parent = data[[response_variable]],
+      #   responses_left = data_split[['left']][[
+      #     response_variable
+      #   ]],
+      #   responses_right = data_split[['right']][[
+      #     response_variable
+      #   ]]
       # )
       
       split_set_deviance[[
         as.character(var_class)
-      ]] <- get_split_deviance_gini(
-        responses_parent = data[[response_variable]],
-        responses_left = data_split[['left']][[
-          response_variable
-        ]],
-        responses_right = data_split[['right']][[
-          response_variable
-        ]]
+      ]] <- get_split_deviance_mae(
+        model_type = model_type,
+        response_variable = response_variable,
+        data_parent = data,
+        data_left = data_split[['left']],
+        data_right = data_split[['right']]
       )
     }
   }
@@ -246,9 +258,10 @@ get_split_set <- function(
 # 
 # # Split set selection.
 # split_set <- get_split_set(
-#   split_variable = 'famsize',
+#   split_variable = "Fjob",
 #   data = school_absences,
-#   response_variable = 'absences'
+#   response_variable = 'absences',
+#   model_type = 'zip'
 # )
 
 
