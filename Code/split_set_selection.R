@@ -4,22 +4,11 @@ require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
 require(DescTools) # For Gini Index.
 
+# SET WORKING DIRECTORY
+setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+
 # HELPER FUNCTIONS
-get_cat_con <- function(values) {
-  ### Given a vector, will return 'cat'
-  ### if the vector contains categorical
-  ### data and 'con' if it contains 
-  ### continuous data.
-  ### @param values: Vector of values.
-  ### @return data_type: Type of data in given vector.
-  ###                    * "cat" = categorical
-  ###                    * "con" = continuous
-  data_type <- 'con'
-  if (is.factor(values) || is.character(values)) {
-    data_type <- 'cat'
-  }
-  return(data_type)
-}
+source("./helper_functions.R")
 
 can_consider_split <- function(
     responses_left, responses_right
@@ -57,140 +46,40 @@ can_consider_split <- function(
   # return(FALSE)
 }
 
-get_valid_split_data <- function(
-    data_split, response_variable
-) {
-  ### Returns data splits such that all columns
-  ### with a single class other than the response
-  ### variable has been dropped.
-  ### @param data_split: Data sets corresponding to
-  ###                    left and right branches as
-  ###                    a hash map with keys "left"
-  ###                    and "right".
-  ### @param response_variable: Variable being predicted.
-  ### @return: Valid data split with only columns having
-  ###          at least 2 classes.
-  single_level_columns <- hash()
-  single_level_columns[['left']] <- sapply(
-    data_split[['left']], 
-    function(x) length(unique(x))
-  ) == 1
-  single_level_columns[['left']][[response_variable]] = FALSE
-  single_level_columns[['right']] <- sapply(
-    data_split[['right']], 
-    function(x) length(unique(x))
-  ) == 1
-  single_level_columns[['right']][[response_variable]] = FALSE
-  
-  data_split_valid <- hash()
-  data_split_valid[['left']] <- data_split[['left']][
-    , !single_level_columns[['left']]
-  ]
-  data_split_valid[['right']] <- data_split[['right']][
-    , !single_level_columns[['right']]
-  ]
-  return(data_split_valid)
-}
-
-fit_model <- function(
-    model_type, data, response_variable
-) {
-  ### Given a model type, fits it to the data.  
-  ### @param response_variable: Name of response variable
-  ###                           in given data.
-  ### @param data: Data which the model with fit.
-  ### @param model_type: The type of model to be
-  ###                    fitted. Options are as follows.
-  ###                    * p (poisson)
-  ###                    * zip (zero inflated poisson zip)
-  ###                    * nb (negative binomial)
-  ###                    * zinb (zero inflated negative binomial)
-  ###                    * hp (hurdle poisson)
-  ###                    * hnb (hurdle negative binomial)
-  ### @return m: Fitted model.
-  m = NA
-  formula_str <- paste(response_variable, " ~ .")
-  if (model_type == 'p') { # POISSON MODEL
-    m <- glm(
-      as.formula(formula_str), 
-      data=data, 
-      family="poisson"
-    )
-  } else if (model_type == 'nb') { # NEGATIVE BINOMIAL MODEL
-    m <- glm.nb(
-      as.formula(formula_str), 
-      data=data
-    )
-  } else if (model_type == 'zip') { # ZERO INFLATED POISSON MODEL
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } else if (model_type == 'zinb') { # ZERO INFLATED NEGATIVE BINOMIAL MODEL
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="negbin"
-    )
-  } else if (model_type == 'hp') { # POISSON HURDLE MODEL
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } else if (model_type == 'hnb') { # NEGATIVE BINOMIAL HURDLE MODEL
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data,
-      dist="negbin"
-    )
-  } else {
-    stop("Invalid model type.")
-  }
-  return(m)
-}
-
-get_split_deviance <- function(
-    data_split, response_variable, model_type,
-    saturated_model_log_likelihood
-) {
-  ### Returns the deviance score for the split.
-  ### Deviance of split is max(log likelihood of
-  ### fitted model using left branch data, 
-  ### log likelihood of fitted model using right
-  ### branch data).
-  ### @param data_split: A hash map with two
-  ###                    keys "left" and "right"
-  ###                    corresponding to data in
-  ###                    the left and right nodes
-  ###                    respectively.
-  ### @param response_variable: The variable we're
-  ###                           trying to predict.
-  ### @param model_type: The type of model to fit.
-  ### @param saturated_model_log_likelihood: Log likelihood
-  ###                                        of model fitted
-  ###                                        with all data.
-  m <- hash()
-  m[['left']] <- fit_model(
-    model_type = model_type,
-    response_variable = response_variable,
-    data = data_split[['left']]
-  )
-  m[['right']] <- fit_model(
-    model_type = model_type,
-    response_variable = response_variable,
-    data = data_split[['right']]
-  )
-  log_likelihood <- hash()
-  log_likelihood[['left']] <- -logLik(m[['left']])
-  log_likelihood[['right']] <- -logLik(m[['right']])
-  return(
-    saturated_model_log_likelihood
-    - log_likelihood[['left']]
-    - log_likelihood[['right']]
-  )
-}
+# get_valid_split_data <- function(
+#     data_split, response_variable
+# ) {
+#   ### Returns data splits such that all columns
+#   ### with a single class other than the response
+#   ### variable has been dropped.
+#   ### @param data_split: Data sets corresponding to
+#   ###                    left and right branches as
+#   ###                    a hash map with keys "left"
+#   ###                    and "right".
+#   ### @param response_variable: Variable being predicted.
+#   ### @return: Valid data split with only columns having
+#   ###          at least 2 classes.
+#   single_level_columns <- hash()
+#   single_level_columns[['left']] <- sapply(
+#     data_split[['left']], 
+#     function(x) length(unique(x))
+#   ) == 1
+#   single_level_columns[['left']][[response_variable]] = FALSE
+#   single_level_columns[['right']] <- sapply(
+#     data_split[['right']], 
+#     function(x) length(unique(x))
+#   ) == 1
+#   single_level_columns[['right']][[response_variable]] = FALSE
+#   
+#   data_split_valid <- hash()
+#   data_split_valid[['left']] <- data_split[['left']][
+#     , !single_level_columns[['left']]
+#   ]
+#   data_split_valid[['right']] <- data_split[['right']][
+#     , !single_level_columns[['right']]
+#   ]
+#   return(data_split_valid)
+# }
 
 get_split_deviance_gini <- function(
     responses_parent, responses_left, responses_right
@@ -222,7 +111,6 @@ get_split_deviance_gini <- function(
 # SPLIT SET SELECTION
 get_split_set <- function(
     split_variable, data, response_variable
-    # , model_type
 ) {
   ### Returns best criterion based on which to split
   ### values in this split variable.
@@ -244,12 +132,6 @@ get_split_set <- function(
   
   # 2. Get deviance scores for all possible 
   #    binary splits of the data.
-  
-  # saturated_model_log_likelihood <- -logLik(fit_model(
-  #   model_type = model_type,
-  #   response_variable = response_variable,
-  #   data = data
-  # ))
   
   split_set_deviance <- hash()
   if (var_type == "cat") {
@@ -274,21 +156,8 @@ get_split_set <- function(
         next # Disregard this set if can't consider.
       }
       
-      # [cat] 2.3. Drop all columns except the response
-      #            variable one that has only only one class.
-      data_split <- get_valid_split_data(
-        data_split = data_split, 
-        response_variable = response_variable
-      )
-      
-      # [cat] 2.4. Compute and keep track of 
+      # [cat] 2.3. Compute and keep track of 
       #            set split deviance.
-      
-      # split_set_deviance[[var_class]] <- get_split_deviance(
-      #   data_split, response_variable, model_type,
-      #   saturated_model_log_likelihood
-      # )
-      
       split_set_deviance[[
         var_class
       ]] <- get_split_deviance_gini(
@@ -323,14 +192,7 @@ get_split_set <- function(
         next # Disregard this set if can't consider.
       }
       
-      # [con] 2.3. Drop all columns except the response
-      #            variable one that has only only one class.
-      data_split <- get_valid_split_data(
-        data_split = data_split,
-        response_variable = response_variable
-      )
-      
-      # [con] 2.4. Compute and keep track
+      # [con] 2.3. Compute and keep track
       #            of set split deviance.
       
       # split_set_deviance[[
@@ -360,6 +222,9 @@ get_split_set <- function(
   arg_max <- NA
   for (var_name in keys(split_set_deviance)) {
     var_deviance <- split_set_deviance[[var_name]]
+    if (is.na(var_deviance)) { # Happens due to underflow.
+      var_deviance <- 0
+    }
     if (var_deviance > cur_max) {
       cur_max <- var_deviance
       arg_max <- var_name
@@ -380,175 +245,17 @@ get_split_set <- function(
 
 # MAIN
 
-# Set working directory to this one.
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
-
-# Load data set.
-school_absences <- read.csv(
-  "../Data/data_clean.csv", 
-  header=TRUE, sep=","
-)
-
-# Split set selection.
-split_set <- get_split_set(
-  split_variable = 'famsize',
-  data = school_absences,
-  response_variable = 'absences'
-  # , model_type = 'nb'
-)
-
-################################################################
-
-# model_type <- 'zip'
-# response_variable <- 'absences'
-# data <- school_absences
-# split_variable <- 'age'
+# # Load data set.
+# school_absences <- read.csv(
+#   "../Data/data_clean.csv",
+#   header=TRUE, sep=","
+# )
 # 
-# print("Selecting split set ...")
-# 
-# split_set <- NA
-# 
-# # 1. Determine if selected variable is 
-# #    categorical or continuous.
-# var_values <- data[[split_variable]]
-# var_classes <- unique(var_values)
-# var_type <- get_cat_con(var_values)
-# 
-# # 2. Get deviance scores for all possible 
-# #    binary splits of the data.
-# 
-# saturated_model_log_likelihood <- -logLik(fit_model(
-#   model_type = model_type,
-#   response_variable = response_variable,
-#   data = data
-# ))
-# 
-# split_set_deviance <- hash()
-# if (var_type == "cat") {
-#   # [cat] 2.1. Loop over every possible binary split.
-#   #            and obtain data subset corresponding to 
-#   #            left (1) and right (0) branches.
-#   for (var_class in var_classes) {
-#     bool_values <- rep(0, length(var_values))
-#     bool_values[var_values == var_class] = 1
-#     data_split <- hash()
-#     data_split[['left']] <- data[bool_values == 1, ]
-#     data_split[['right']] <- data[bool_values == 0, ]
-#     
-#     # [cat] 2.2. Consider or disregard this split. 
-#     #            If all response variables are 0
-#     #            in one branch and 1 in the other branch.
-#     #            Then, ignore this split.
-#     if (!can_consider_split(
-#       data_split[['left']][[response_variable]],
-#       data_split[['right']][[response_variable]]
-#     )) {
-#       next # Disregard this set if can't consider.
-#     }
-#     
-#     # [cat] 2.3. Drop all columns except the response
-#     #            variable one that has only only one class.
-#     data_split <- get_valid_split_data(
-#       data_split = data_split, 
-#       response_variable = response_variable
-#     )
-#     
-#     # [cat] 2.4. Compute and keep track of 
-#     #            set split deviance.
-#     
-#     # split_set_deviance[[var_class]] <- get_split_deviance(
-#     #   data_split, response_variable, model_type,
-#     #   saturated_model_log_likelihood
-#     # )
-#     
-#     split_set_deviance[[
-#       var_class
-#     ]] <- get_split_deviance_gini(
-#       responses_parent = data[[response_variable]],
-#       responses_left = data_split[['left']][[
-#         response_variable
-#       ]],
-#       responses_right = data_split[['right']][[
-#         response_variable
-#       ]]
-#     )
-#   }
-# } else { # (variable_type == "con")
-#   # [con] 2.1. Loop over every possible binary split.
-#   #            and obtain data subset corresponding to 
-#   #            left (1) and right (0) branches.
-#   for (var_class in var_classes) {
-#     bool_values <- rep(0, length(var_values))
-#     bool_values[var_values >= var_class] = 1
-#     data_split <- hash()
-#     data_split[['left']] <- data[bool_values == 1, ]
-#     data_split[['right']] <- data[bool_values == 0, ]
-#     
-#     # [con] 2.2. Consider or disregard this split.
-#     #            If all response variables are 0
-#     #            in one branch and 1 in the other branch.
-#     #            Then, ignore this split.
-#     if (!can_consider_split(
-#       data_split[['left']][[response_variable]],
-#       data_split[['right']][[response_variable]]
-#     )) {
-#       next # Disregard this set if can't consider.
-#     }
-#     
-#     # [con] 2.3. Drop all columns except the response
-#     #            variable one that has only only one class.
-#     data_split <- get_valid_split_data(
-#       data_split = data_split,
-#       response_variable = response_variable
-#     )
-#     
-#     # [con] 2.4. Compute and keep track
-#     #            of set split deviance.
-#     
-#     # split_set_deviance[[
-#     #   as.character(var_class)
-#     # ]] <- get_split_deviance(
-#     #   data_split, response_variable, model_type,
-#     #   saturated_model_log_likelihood
-#     # )
-#     
-#     split_set_deviance[[
-#       as.character(var_class)
-#     ]] <- get_split_deviance_gini(
-#       responses_parent = data[[response_variable]],
-#       responses_left = data_split[['left']][[
-#         response_variable
-#       ]],
-#       responses_right = data_split[['right']][[
-#         response_variable
-#       ]]
-#     )
-#   }
-# }
-# 
-# # 3. Get the the set corresponding to the max 
-# #    split set deviance value.
-# cur_max <- -Inf
-# arg_max <- NA
-# for (var_name in keys(split_set_deviance)) {
-#   var_deviance <- split_set_deviance[[var_name]]
-#   if (var_deviance > cur_max) {
-#     cur_max <- var_deviance
-#     arg_max <- var_name
-#   }
-# }
-# split_set <- arg_max
-# if (var_type == 'con') {
-#   split_set <- as.numeric(arg_max)
-# }
-# 
-# print(paste(
-#   "Split set found. (", split_variable, 
-#   "=", split_set, ")"
-# ))
-
-################################################################
-
-
+# # Split set selection.
+# split_set <- get_split_set(
+#   split_variable = 'famsize',
+#   data = school_absences,
+#   response_variable = 'absences'
+# )
 
 

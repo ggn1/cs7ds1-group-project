@@ -1,0 +1,5 @@
+ERRORS
+======
+
+1. Error in if (var_deviance > cur_max) { : 
+  	missing value where TRUE/FALSE needed
