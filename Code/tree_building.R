@@ -51,6 +51,12 @@ create_tree <- function(data, level=0) {
     nrow(data) <= (0.05 * TOTAL_N_ROWS) ||
     length(unique(data[[RESPONSE_VARIABLE]])) == 1
   ) {
+    m <- fit_model(
+      model_type = model_type,
+      data = data,
+      response_variable = response_variable
+    )
+    
     # Return terminal node.
     node <- hash()
     node[["type"]] <- "terminal"
