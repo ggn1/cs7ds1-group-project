@@ -1,8 +1,12 @@
 # LOAD PACKAGES
 require(hash) # For hash map data structure.
+require(rstudioapi) # For dynamic setwd(...)
 
 # SET WORKING DIRECTORY
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print(getwd())
 
 # HELPER FUNCTIONS
 source("./helper_functions.R")
@@ -39,11 +43,21 @@ create_tree <- function(data, level=0) {
   )
   
   # 2. Check for stopping condition.
+  
+  # If no model could fit this data, then this 
+  # is an invalid leaf that will be pruned.
+  if(model_type == 'none') {
+    # Return terminal node.
+    node <- hash()
+    node[["type"]] <- "invalid"
+    node[['data']] <- data
+    return(node)
+  }
+  
   # Stop growing if this node has < 5% of
   # the data points in the original data set
   # or if all values in the response variable
-  # are the same.
-  
+  # are the same. This is a valid leaf.
   if (
     nrow(data) <= (0.05 * TOTAL_N_ROWS) ||
     length(unique(data[[RESPONSE_VARIABLE]])) == 1
@@ -53,6 +67,8 @@ create_tree <- function(data, level=0) {
     node[["type"]] <- "terminal"
     node[['data']] <- data
     node[['model_type']] <- model_type
+    node[['has_left_child']] <- FALSE
+    node[['has_right_child']] <- FALSE
     return(node)
   }
   
@@ -113,8 +129,24 @@ create_tree <- function(data, level=0) {
   node[['split_variable']] <- split_variable
   node[['split_set']] <- split_set
   node[['model_type']] <- model_type
-  node[['left_child']] <- left_child
-  node[['right_child']] <- right_child
+  if (!left_child[['type']] == 'invalid') {
+    node[['left_child']] <- left_child
+    node[['has_left_child']] <- TRUE
+  } else {
+    node[['has_left_child']] <- FALSE
+  }
+  if (!right_child[['type']] == 'invalid') {
+    node[['right_child']] <- right_child
+    node[['has_right_child']] <- TRUE
+  } else {
+    node[['has_right_child']] <- FALSE
+  }
+  if (
+    node[['has_left_child']] == FALSE &&
+    node[['has_right_child']] == FALSE
+  ) {
+    node[['type']] <- "terminal"
+  }
   return(node)
 }
 

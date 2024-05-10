@@ -2,9 +2,13 @@
 require(hash) # For hash map data structure.
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
+require(rstudioapi) # For dynamic setwd(...)
 
 # SET WORKING DIRECTORY
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print( getwd() )
 
 # HELPER FUNCTIONS
 source("./helper_functions.R")

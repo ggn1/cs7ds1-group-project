@@ -2,9 +2,13 @@
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
 require(caret) # For cross validation.
+require(rstudioapi) # For dynamic setwd(...)
 
 # SET WORKING DIRECTORY
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print( getwd() )
 
 # HELPER FUNCTIONS
 source("./helper_functions.R")
@@ -94,6 +98,12 @@ get_best_model <- function(data, response_variable) {
       '(mse =', mse, ")" 
     ))
   }
+  if (
+    min(unlist(res_cv)) == Inf || 
+    is.na(min(unlist(res_cv)))
+  ) {
+    return('none')
+  }
   model_best <- model_types[which.min(res_cv)]
   print(paste(
     'Model resulting in lowest avg.',
@@ -104,15 +114,15 @@ get_best_model <- function(data, response_variable) {
 
 # MAIN
 
-# # Load data.
-# school_absences <- read.csv(
-#   "../Data/data_clean.csv",
-#   header=TRUE, sep=","
-# )
-# response_variable <- "absences"
-# 
-# # Get best model.
-# model_type <- get_best_model(
-#   data = school_absences,
-#   response_variable = response_variable
-# )
+# Load data.
+school_absences <- read.csv(
+  "../Data/data_clean.csv",
+  header=TRUE, sep=","
+)
+response_variable <- "absences"
+
+# Get best model.
+model_type <- get_best_model(
+  data = school_absences,
+  response_variable = response_variable
+)
