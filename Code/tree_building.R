@@ -46,10 +46,10 @@ create_tree <- function(data, level=0) {
     length(unique(data[[RESPONSE_VARIABLE]])) == 1
   ) {
     # Return terminal node.
-    return(list(
-      "Terminal Node",
-      data = data
-    ))
+    node <- hash()
+    node[["type"]] <- "terminal"
+    node[['data']] <- data
+    return(node)
   }
   
   # 2. Model selection.
@@ -99,24 +99,24 @@ create_tree <- function(data, level=0) {
   # 6. Recursively call the create tree
   #    function with data from both child
   #    nodes to build the next level of the tree.
-  left_tree <- create_tree(
+  left_child <- create_tree(
     data = data_split[['left']], 
     level=level+1
   )
-  right_tree <- create_tree(
+  right_child <- create_tree(
     data = data_split[['right']], 
     level=level+1
   )
   
   # Return intermediate node.
-  return(list(
-    "Intermediate Node", 
-    split_variable = split_variable, 
-    split_set = split_set, 
-    model_type = model_type,
-    left = left_tree, 
-    right = right_tree
-  ))
+  node <- hash()
+  node[['type']] <- "intermediate"
+  node[['split_variable']] <- split_variable
+  node[['split_set']] <- split_set
+  node[['model_type']] <- model_type
+  node[['left_child']] <- left_child
+  node[['right_child']] <- right_child
+  return(node)
 }
 
 # MAIN
@@ -156,6 +156,6 @@ data_test <- data_sanitized[[2]]
 
 # Build tree.
 TOTAL_N_ROWS <- nrow(data_train) # global variable.
-tree <- create_tree(data = data_train)
+root <- create_tree(data = data_train)
 
 
