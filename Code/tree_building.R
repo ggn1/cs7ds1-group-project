@@ -14,11 +14,19 @@ source("./model_selection.R")
 source("./split_variable_selection.R")
 source("./split_set_selection.R")
 
-create_tree <- function(data, level=0) {
+create_tree <- function(
+    data, level=0, min_split_pc=0.05, max_depth=-1
+) {
   ### A function that recursively builds a decision tree.
   ### @param data: Data set using which to build the tree.
   ### @param RESPONSE_VARIABLE: The variable that is to be
   ###                           predicted.
+  ### @param min_split_pc: The minimum percent of the original
+  ###                      no. of data points that can be in
+  ###                      the parent node to allow for
+  ###                      splitting.
+  ### @param max_depth: The maximum no. of levels that the
+  ###                   are allowed.
   ### @return: Terminal or intermediate nodes of the tree
   ###          with information such as given below.
   ###          Here, $ => for intermediate node only and
@@ -59,8 +67,9 @@ create_tree <- function(data, level=0) {
   # or if all values in the response variable
   # are the same. This is a valid leaf.
   if (
-    nrow(data) <= (0.05 * TOTAL_N_ROWS) ||
-    length(unique(data[[RESPONSE_VARIABLE]])) == 1
+    nrow(data) < (min_split_pc * TOTAL_N_ROWS) ||
+    length(unique(data[[RESPONSE_VARIABLE]])) == 1 ||
+    (max_depth >= 0 && level == max_depth)
   ) {
     # Return terminal node.
     node <- hash()
@@ -187,6 +196,9 @@ data_test <- data_sanitized[[2]]
 
 # Build tree.
 TOTAL_N_ROWS <- nrow(data_train) # global variable.
-root <- create_tree(data = data_train)
+root <- create_tree(
+  data = data_train,
+  min_split_pc = 0.3
+)
 
 
