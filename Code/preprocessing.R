@@ -46,7 +46,7 @@ heatmap.2(
   dendrogram = "none" # Do not calculate dendrograms
 )
 # OBSERVATIONS:
-# * Drop G1, G2, Medu, goout, Dalc.
+# * Drop G1, G2, Fedu, goout, Dalc.
 
 # EXPLORING CATEGORICAL VARIABLES
 
@@ -98,7 +98,7 @@ for (characteristic in c(
 layout(1)
 
 # EXTRACT USEFUL COLUMNS ONLY
-data <- as.data.frame(data[, c('absences', 'course', 'school', 'sex', 'age', 'address', 'famsize', 'Medu', 'Fedu', 'Mjob', 'Fjob', 'guardian', 'traveltime', 'studytime', 'failures', 'schoolsup', 'famsup', 'activities', 'higher', 'internet', 'romantic', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'G3', 'nursery')])
+data <- as.data.frame(data[, c('absences', 'course', 'school', 'sex', 'age', 'address', 'famsize', 'Medu', 'Fedu', 'Mjob', 'Fjob', 'guardian', 'traveltime', 'studytime', 'failures', 'schoolsup', 'famsup', 'activities', 'higher', 'internet', 'romantic', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'G3', 'nursery', 'reason')])
 
 # CHECKS
 
