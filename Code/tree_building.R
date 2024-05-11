@@ -14,7 +14,7 @@ source("./model_selection.R")
 source("./split_variable_selection.R")
 source("./split_set_selection.R")
 
-create_tree <- function(data, level=0) {
+create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS) {
   ### A function that recursively builds a decision tree.
   ### @param data: Data set using which to build the tree.
   ### @param RESPONSE_VARIABLE: The variable that is to be
@@ -130,11 +130,13 @@ create_tree <- function(data, level=0) {
   #    nodes to build the next level of the tree.
   left_child <- create_tree(
     data = data_split[['left']], 
-    level=level+1
+    level=level+1,
+    TOTAL_N_ROWS
   )
   right_child <- create_tree(
     data = data_split[['right']], 
-    level=level+1
+    level=level+1,
+    TOTAL_N_ROWS
   )
   
   # Return intermediate node.
