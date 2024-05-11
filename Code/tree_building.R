@@ -54,7 +54,7 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
   
   # If no model could fit this data, then this 
   # is an invalid leaf that will be pruned.
-  if(model_type == 'none') {
+  if(model_type == 'none' || (max_depth >= 0 && level > max_depth)) {
     # Return terminal node.
     node <- hash()
     node[["type"]] <- "invalid"
@@ -140,12 +140,16 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
   left_child <- create_tree(
     data = data_split[['left']], 
     level=level+1,
-    TOTAL_N_ROWS
+    TOTAL_N_ROWS,
+    min_split_pc=min_split_pc, 
+    max_depth=min_split_pc
   )
   right_child <- create_tree(
     data = data_split[['right']], 
     level=level+1,
-    TOTAL_N_ROWS
+    TOTAL_N_ROWS,
+    min_split_pc=min_split_pc, 
+    max_depth=min_split_pc
   )
   
   # Return intermediate node.

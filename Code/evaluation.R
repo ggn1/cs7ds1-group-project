@@ -120,7 +120,7 @@ evaluate.tree <- function(node, response_variable, newdata){
 }
 
 
-evaluate_cv <- function(model_type, data) {
+evaluate_cv <- function(model_type, data, min_split_pc=0.05, max_depth=-1) {
   #Randomly shuffle the data
   data_shuffled<-data[sample(nrow(data)),]
   
@@ -178,7 +178,8 @@ evaluate_cv <- function(model_type, data) {
     else if (model_type == 'core'){
       # Build tree.
       TOTAL_N_ROWS <- nrow(trainData) # global variable.
-      model <- create_tree(data = trainData, TOTAL_N_ROWS=TOTAL_N_ROWS)
+      model <- create_tree(data = trainData, TOTAL_N_ROWS=TOTAL_N_ROWS,
+                           min_split_pc=min_split_pc, max_depth=max_depth)
       print(model)
     }
     else { # Invalid model.
