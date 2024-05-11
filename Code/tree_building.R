@@ -62,11 +62,24 @@ create_tree <- function(data, level=0) {
     nrow(data) <= (0.05 * TOTAL_N_ROWS) ||
     length(unique(data[[RESPONSE_VARIABLE]])) == 1
   ) {
+    
+    # Drop factors that only have one level
+    cols_unique <- sapply(data, function(x) length(unique(x))) > 1
+    data <- data[names(cols_unique[cols_unique])]
+    
+    # Fit model for terminal node
+    model <- fit_model(
+      model_type = model_type, 
+      data = data, 
+      response_variable = RESPONSE_VARIABLE
+    )
+      
     # Return terminal node.
     node <- hash()
     node[["type"]] <- "terminal"
     node[['data']] <- data
     node[['model_type']] <- model_type
+    node[['model']] <- model
     node[['has_left_child']] <- FALSE
     node[['has_right_child']] <- FALSE
     return(node)
@@ -110,6 +123,7 @@ create_tree <- function(data, level=0) {
       , drop = FALSE
     ]
   }
+  #data_split <- do_split_data(data, split_variable, split_set)
 
   # 6. Recursively call the create tree
   #    function with data from both child
@@ -146,47 +160,61 @@ create_tree <- function(data, level=0) {
     node[['has_right_child']] == FALSE
   ) {
     node[['type']] <- "terminal"
+    
+    # Drop factors that only have one level
+    cols_unique <- sapply(data, function(x) length(unique(x))) > 1
+    data <- data[names(cols_unique[cols_unique])]
+    
+    # Fit model for terminal node
+    model <- fit_model(
+      model_type = model_type, 
+      data = data, 
+      response_variable = RESPONSE_VARIABLE
+    )
+    node[['data']] <- data
+    node[['model_type']] <- model_type
+    node[['model']] <- model
   }
   return(node)
 }
 
 # MAIN
 
-# Load data.
-school_absences <- read.csv(
-  "../Data/data_clean.csv",
-  header=TRUE, sep=","
-)
-RESPONSE_VARIABLE <- "absences"
+## Load data.
+#school_absences <- read.csv(
+#  "../Data/data_clean.csv",
+#  header=TRUE, sep=","
+#)
+#RESPONSE_VARIABLE <- "absences"
+#
+## Shuffle
+#set.seed(32)
+#shuffled_data <- school_absences[
+#  sample(nrow(school_absences)), 
+#]
+#
+## Reset index.
+#rownames(shuffled_data) <- NULL
 
-# Shuffle
-set.seed(32)
-shuffled_data <- school_absences[
-  sample(nrow(school_absences)), 
-]
+## 80/20 train/test split.
+#index_train <- createDataPartition(
+#  shuffled_data[RESPONSE_VARIABLE][,], 
+#  p = 0.8, list = FALSE
+#)
+#data_train <- shuffled_data[index_train, ]
+#data_test <- shuffled_data[-index_train, ]
 
-# Reset index.
-rownames(shuffled_data) <- NULL
-
-# 80/20 train/test split.
-index_train <- createDataPartition(
-  shuffled_data[RESPONSE_VARIABLE][,], 
-  p = 0.8, list = FALSE
-)
-data_train <- shuffled_data[index_train, ]
-data_test <- shuffled_data[-index_train, ]
-
-# Sanitize data for model fitting.
-data_sanitized <- sanitize_fit_input(
-  data_check = data_train,
-  data_apply = list(data_train, data_test),
-  response_variable = RESPONSE_VARIABLE
-)
-data_train <- data_sanitized[[1]]
-data_test <- data_sanitized[[2]]
-
-# Build tree.
-TOTAL_N_ROWS <- nrow(data_train) # global variable.
-root <- create_tree(data = data_train)
+## Sanitize data for model fitting.
+#data_sanitized <- sanitize_fit_input(
+#  data_check = data_train,
+#  data_apply = list(data_train, data_test),
+#  response_variable = RESPONSE_VARIABLE
+#)
+#data_train <- data_sanitized[[1]]
+#data_test <- data_sanitized[[2]]
+#
+## Build tree.
+#TOTAL_N_ROWS <- nrow(data_train) # global variable.
+#root <- create_tree(data = data_train)
 
 

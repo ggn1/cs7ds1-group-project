@@ -114,15 +114,15 @@ get_best_model <- function(data, response_variable) {
 
 # MAIN
 
-# Load data.
-school_absences <- read.csv(
-  "../Data/data_clean.csv",
-  header=TRUE, sep=","
-)
-response_variable <- "absences"
-
-# Get best model.
-model_type <- get_best_model(
-  data = school_absences,
-  response_variable = response_variable
-)
+## Load data.
+#school_absences <- read.csv(
+#  "../Data/data_clean.csv",
+#  header=TRUE, sep=","
+#)
+#response_variable <- "absences"
+#
+## Get best model.
+#model_type <- get_best_model(
+#  data = school_absences,
+#  response_variable = response_variable
+#)
