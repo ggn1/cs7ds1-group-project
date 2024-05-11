@@ -21,6 +21,11 @@ school_absences <- read.csv(
 )
 RESPONSE_VARIABLE <- "absences"
 
+# Select subset of data
+colnames(school_absences)
+school_absences <- school_absences[c("absences", "sex", "age", "health", "G3")]
+
+
 # Shuffle
 set.seed(32)
 shuffled_data <- school_absences[
@@ -46,6 +51,7 @@ data_sanitized <- sanitize_fit_input(
 )
 data_train <- data_sanitized[[1]]
 data_test <- data_sanitized[[2]]
+
 
 
 # Calculate metrics for each model using 10-fold cross validation

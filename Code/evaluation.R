@@ -178,7 +178,7 @@ evaluate_cv <- function(model_type, data) {
     else if (model_type == 'core'){
       # Build tree.
       TOTAL_N_ROWS <- nrow(trainData) # global variable.
-      model <- create_tree(data = trainData)
+      model <- create_tree(data = trainData, TOTAL_N_ROWS=TOTAL_N_ROWS)
       print(model)
     }
     else { # Invalid model.
