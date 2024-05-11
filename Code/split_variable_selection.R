@@ -1,10 +1,19 @@
 # LOAD PACKAGES
-require(hash) # For hash map data structure.
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
+require(caret) # For cross validation.
+require(rstudioapi) # For dynamic setwd(...)
+
+# SET WORKING DIRECTORY
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print( getwd() )
 
 # HELPER FUNCTIONS
-get_cat_con <- function(data, response_variable) {
+source("./helper_functions.R")
+
+get_cat_con_all <- function(data, response_variable) {
   ### Computes whether each column in the data set is
   ### categorical or non-categorical in nature.
   ### @param data: Data set
@@ -19,79 +28,15 @@ get_cat_con <- function(data, response_variable) {
   for (covariate in names(data)) { # Check each covariate.
     # Skip the response variable.
     if (covariate == response_variable) next 
-    if (
-      is.factor(data[[covariate]]) || 
-      is.character(data[[covariate]])
-    ) { # covariate is categorical
-      covariates[[length(covariates)+1]] <- c(covariate, "cat")
-    } else { # covariate is continuous
-      covariates[[length(covariates)+1]] <- c(covariate, "con")
-    }
+    covariates[[length(covariates)+1]] <- c(
+      covariate, get_cat_con(data[[covariate]])
+    )
   }
   return(covariates)
 }
 
-fit_model <- function(
-    model_type, data, response_variable
-) {
-  ### Given a model type, fits it to the data.  
-  ### @param response_variable: Name of response variable
-  ###                           in given data.
-  ### @param data: Data which the model with fit.
-  ### @param model_type: The type of model to be
-  ###                    fitted. Options are as follows.
-  ###                    * p (poisson)
-  ###                    * zip (zero inflated poisson zip)
-  ###                    * nb (negative binomial)
-  ###                    * zinb (zero inflated negative binomial)
-  ###                    * hp (hurdle poisson)
-  ###                    * hnb (hurdle negative binomial)
-  ### @return m: Fitted model.
-  m = NA
-  formula_str <- paste(response_variable, " ~ .")
-  if (model_type == 'p') { # POISSON MODEL
-    m <- glm(
-      as.formula(formula_str), 
-      data=data, 
-      family="poisson"
-    )
-  } else if (model_type == 'nb') { # NEGATIVE BINOMIAL MODEL
-    m <- glm.nb(
-      as.formula(formula_str), 
-      data=data
-    )
-  } else if (model_type == 'zip') { # ZERO INFLATED POISSON MODEL
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } else if (model_type == 'zinb') { # ZERO INFLATED NEGATIVE BINOMIAL MODEL
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="negbin"
-    )
-  } else if (model_type == 'hp') { # POISSON HURDLE MODEL
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } else if (model_type == 'hnb') { # NEGATIVE BINOMIAL HURDLE MODEL
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data,
-      dist="negbin"
-    )
-  } else {
-    stop("Invalid model type.")
-  }
-  return(m)
-}
-
 compute_residual <- function(
-  m, model_type, response_variable, data
+    m, model_type, response_variable, data
 ) {
   ### Computes and returns residuals based on
   ### model predictions v/s true counts.
@@ -104,7 +49,7 @@ compute_residual <- function(
   ###              to generate predictions.
   # Get ground truth.
   truth <- hash()
-  truth[['count']] <- data[response_variable][,]
+  truth[['count']] <- data[[response_variable]]
   truth[['zero']] <- as.numeric(
     ifelse(truth[['count']] == 0, 1, 0)
   )
@@ -134,7 +79,7 @@ compute_residual <- function(
   residual <- hash()
   residual[['count']] <- (
     predictions[['count']] - 
-    truth[['count']]
+      truth[['count']]
   )
   residual[['zero']] <- list()
   if (length(predictions[['zero']]) > 0) {
@@ -190,6 +135,12 @@ compute_partial_residual <- function(
   for (ex_var in exclude_variables) {
     data <- data[, -which(names(data) == ex_var)]
   }
+  data_sanitized <- sanitize_fit_input(
+    data_check = data,
+    data_apply = list(data),
+    response_variable = response_variable
+  )
+  data <- data_sanitized[[1]]
   
   # Create and fit new model of given type
   # on data excluding given variable.
@@ -212,13 +163,13 @@ compute_partial_residual <- function(
   residual_partial <- hash()
   residual_partial[["count"]] <- (
     residual_original[["count"]] - 
-    residual_ex_predictor[["count"]]
+      residual_ex_predictor[["count"]]
   )
   residual_partial[["zero"]] <- list()
   if(length(residual_original[["zero"]]) > 0) {
     residual_partial[["zero"]] <- (
       residual_original[["zero"]] - 
-      residual_ex_predictor[["zero"]]
+        residual_ex_predictor[["zero"]]
     )
   }
   return(residual_partial)
@@ -229,7 +180,7 @@ get_split_variable <- function(
     data, response_variable, model_type
 ) {
   ### Determines the best variable to use to split 
-  ### the tree. Partial residuals and the Chi-Squaare
+  ### the tree. Partial residuals and the Chi-Square
   ### test is leveraged repeatedly to do this after
   ### considering the main effect of each predictor
   ### independently w.r.t the response variable as 
@@ -254,17 +205,23 @@ get_split_variable <- function(
   
   split_variable <- NA
   
-  # Get covariate (name, type) pairs.
-  cov_name_types <- get_cat_con( 
-    data = data,
+  # 1. Fit model.
+  data_sanitaized <- sanitize_fit_input(
+    data_check = data,
+    data_apply = list(data),
     response_variable = response_variable
   )
-  
-  # 1. Fit model.
+  data <- data_sanitaized[[1]]
   m <- fit_model(
     model_type = model_type, 
     response_variable = response_variable,
     data = data
+  )
+  
+  # Get covariate (name, type) pairs.
+  cov_name_types <- get_cat_con_all( 
+    data = data,
+    response_variable = response_variable
   )
   predictors <- c()
   for (cov in cov_name_types) {
@@ -354,7 +311,7 @@ get_split_variable <- function(
       quartile_grp[which(cov_data <= q2)] = 2
       quartile_grp[which(cov_data <= q1)] = 1
       cov_data_grp <- factor(quartile_grp)
-    } else {
+    } else { # (cov_type == "cat")
       cov_data_grp <- factor(cov_data)
     }
     
@@ -380,23 +337,24 @@ get_split_variable <- function(
       )
     }
     
-    # Drop entries where column total == 0.
-    column_totals <- margin.table(
-      contingency_table, margin = 2
-    )
-    non_zero_columns <- column_totals > 0
-    contingency_table <- contingency_table[
-      , non_zero_columns
-    ]
+    # # Drop entries where column total == 0.
+    # column_totals <- margin.table(
+    #   contingency_table, margin = 2
+    # )
+    # non_zero_columns <- column_totals > 0
+    # contingency_table <- contingency_table[
+    #   , non_zero_columns
+    # ]
     
     # Compute the Pearson chi-squared test
     # statistic for independence.
+    # print(contingency_table)
     chi_squared_test <- chisq.test(contingency_table)
     deg_free <- chi_squared_test$parameter
     chi_squared <- chi_squared_test$statistic
     if (deg_free > 1) { # Wilson-Hilferty approximation.
       chi_squared <- max(0, (7/9) + sqrt(deg_free) * (
-         (chi_squared/deg_free)^(1/3)-1+2/(9*deg_free)
+        (chi_squared/deg_free)^(1/3)-1+2/(9*deg_free)
       ))^3
     }
     
@@ -547,17 +505,18 @@ get_split_variable <- function(
         )
       }
       
-      # Drop entries where column total == 0.
-      column_totals <- margin.table(
-        contingency_table, margin = 2
-      )
-      non_zero_columns <- column_totals > 0
-      contingency_table <- contingency_table[
-        , non_zero_columns
-      ]
+      # # Drop entries where column total == 0.
+      # column_totals <- margin.table(
+      #   contingency_table, margin = 2
+      # )
+      # non_zero_columns <- column_totals > 0
+      # contingency_table <- contingency_table[
+      #   , non_zero_columns
+      # ]
       
       # Compute the Pearson chi-squared test
       # statistic for independence.
+      # print(contingency_table)
       chi_squared_test <- chisq.test(contingency_table)
       deg_free <- chi_squared_test$parameter
       chi_squared <- chi_squared_test$statistic
@@ -621,27 +580,24 @@ get_split_variable <- function(
       split_variable
     ))
   }
-
+  
   # Return identified best split variable.  
   return(split_variable)
 }
 
 # MAIN
 
-# Set working directory to this one.
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
-
-# Load data set.
-school_absences <- read.csv(
-  "../Data/data_clean.csv", 
-  header=TRUE, sep=","
-)
-
-# Perform split variable selection.
-split_variable <- get_split_variable(
-  data = school_absences, 
-  response_variable = "absences",
-  model_type = "zip"
-)
+# # Load data set.
+# school_absences <- read.csv(
+#   "../Data/data_clean.csv",
+#   header=TRUE, sep=","
+# )
+# 
+# # Perform split variable selection.
+# split_variable <- get_split_variable(
+#   data = school_absences,
+#   response_variable = "absences",
+#   model_type = "zip"
+# )
 
 

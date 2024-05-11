@@ -13,10 +13,10 @@ data <- read.csv("./data.csv", header=TRUE, sep= ",")
 str(data)
 
 # Extract useful features only and view the data.
-data <- as.data.frame(data[, c('absences', 'course', 'school', 'sex', 'age', 'address', 'famsize', 'Medu', 'Fedu', 'Mjob', 'Fjob', 'guardian', 'traveltime', 'studytime', 'failures', 'schoolsup', 'famsup', 'activities', 'higher', 'internet', 'romantic', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'G3')])
+data <- as.data.frame(data[, c('absences', 'course', 'school', 'sex', 'age', 'address', 'famsize', 'Medu', 'Fedu', 'Mjob', 'Fjob', 'guardian', 'traveltime', 'studytime', 'failures', 'schoolsup', 'famsup', 'activities', 'higher', 'internet', 'romantic', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'G3', 'nursery')])
 head(data)
 
-# PREPROCESSING
+# EDA
 
 # Check length of columns.
 for (column in names(data)) {
@@ -53,21 +53,6 @@ print(paste('No. of rows =', length(data$absences)))
 # Obs. 
 #   * Since variance >> mean, it's likely that data 
 #     is over-dispersed.
-
-# # LABEL ENCODING
-# # Ordinal categorical variables can be label encoded
-# # to reflect their order in an ascending manner as
-# # 0, 1, 2, ...
-# data$famsize <- ifelse(data$famsize == "LE3", 0, 1)
-# # Binary variables can be label encoded such that
-# # presence of something ("yes") is 1 and 
-# # absence of it ("no") is 0.
-# data$internet <- ifelse(data$internet == "yes", 1, 0)
-# data$romantic <- ifelse(data$romantic == "yes", 1, 0)
-# data$higher <- ifelse(data$higher == "yes", 1, 0)
-# data$activities <- ifelse(data$activities == "yes", 1, 0)
-# data$famsup <- ifelse(data$famsup == "yes", 1, 0)
-# data$schoolsup <- ifelse(data$schoolsup == "yes", 1, 0)
 
 # # Save cleaned data.
 # write.csv(data, file = "./data_clean.csv", row.names = FALSE)

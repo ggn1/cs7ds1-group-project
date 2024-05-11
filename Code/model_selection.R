@@ -2,78 +2,16 @@
 require(pscl) # Zero inflated poisson model.
 require(MASS) # Poisson and negative binomial models.
 require(caret) # For cross validation.
+require(rstudioapi) # For dynamic setwd(...)
+
+# SET WORKING DIRECTORY
+current_path = rstudioapi::getActiveDocumentContext()$path 
+print(current_path)
+setwd(dirname(current_path ))
+print( getwd() )
 
 # HELPER FUNCTIONS
-fit_model <- function(
-    model_type, data, response_variable
-) {
-  ### Given a model type, fits it to the data.  
-  ### @param response_variable: Name of response variable
-  ###                           in given data.
-  ### @param data: Data which the model with fit.
-  ### @param model_type: The type of model to be
-  ###                    fitted. Options are as follows.
-  ###                    * p (poisson)
-  ###                    * zip (zero inflated poisson zip)
-  ###                    * nb (negative binomial)
-  ###                    * zinb (zero inflated negative binomial)
-  ###                    * hp (hurdle poisson)
-  ###                    * hnb (hurdle negative binomial)
-  ### @return m: Fitted model.
-  m = NA
-  formula_str <- paste(response_variable, " ~ .")
-  # POISSON MODEL
-  if (model_type == 'p') {
-    m <- glm(
-      as.formula(formula_str), 
-      data=data, 
-      family="poisson"
-    )
-  } 
-  # NEGATIVE BINOMIAL MODEL
-  else if (model_type == 'nb') {
-    m <- glm.nb(
-      as.formula(formula_str), 
-      data=data
-    )
-  } 
-  # ZERO INFLATED POISSON MODEL
-  else if (model_type == 'zip') { 
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } 
-  # ZERO INFLATED NEGATIVE BINOMIAL MODEL
-  else if (model_type == 'zinb') { 
-    m <- zeroinfl(
-      as.formula(formula_str), 
-      data=data, 
-      dist="negbin"
-    )
-  } 
-  # POISSON HURDLE MODEL
-  else if (model_type == 'hp') {
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data, 
-      dist="poisson"
-    )
-  } 
-  # NEGATIVE BINOMIAL HURDLE MODEL
-  else if (model_type == 'hnb') {
-    m <- hurdle(
-      as.formula(formula_str), 
-      data=data,
-      dist="negbin"
-    )
-  } 
-  else {
-    stop("Invalid model type.")
-  }
-  return(m)
-}
+source("./helper_functions.R")
 
 cv10fold <- function(
     model_type, data, response_variable
@@ -86,7 +24,10 @@ cv10fold <- function(
   ### @return: Average of MSE values across 10 folds.
   folds <- 10
   n <- nrow(data)
-  fold_indices <- cut(1:n, breaks = folds, labels = FALSE)
+  fold_indices <- cut(
+    1:n, breaks = folds, 
+    labels = FALSE
+  )
   
   # Initialize for accumulating errors.
   total_error <- 0
@@ -94,6 +35,14 @@ cv10fold <- function(
   for (i in 1:folds) {
     fold_train <- data[fold_indices != i,]
     fold_validate <- data[fold_indices == i,]
+    
+    data_sanitized <- sanitize_fit_input(
+      data_check = fold_train,
+      data_apply = list(fold_train, fold_validate),
+      response_variable = response_variable
+    )
+    fold_train <- data_sanitized[[1]]
+    fold_validate <- data_sanitized[[2]]
     
     # Fit model on train set.
     m <- fit_model(
@@ -116,7 +65,6 @@ cv10fold <- function(
   
   # Calculate and return mean squared error (MSE).
   mse <- total_error / n
-  
   return(mse)
 }
 
@@ -134,11 +82,27 @@ get_best_model <- function(data, response_variable) {
   )
   res_cv <- list()
   for (model_type in model_types) {
-    res_cv <- append(res_cv, cv10fold(
+    mse <- tryCatch({cv10fold(
       model_type = model_type, data = data, 
       response_variable = response_variable
+    )}, error = function(e) {
+      print(paste(
+        "Model", model_type, "cannot be fit.",
+        "Thus, no longer a candidate for best model."
+      ))
+      return(Inf)
+    })
+    res_cv <- append(res_cv, mse)
+    print(paste(
+      'Evaluated model:', model_type,
+      '(mse =', mse, ")" 
     ))
-    print(paste('Evaluated model:', model_type))
+  }
+  if (
+    min(unlist(res_cv)) == Inf || 
+    is.na(min(unlist(res_cv)))
+  ) {
+    return('none')
   }
   model_best <- model_types[which.min(res_cv)]
   print(paste(
@@ -150,20 +114,16 @@ get_best_model <- function(data, response_variable) {
 
 # MAIN
 
-# Set working directory to this one.
-setwd("C:/Users/g_gna/Documents/TCD/Modules/CS7DS1_DataAnalytics/Project/Code")
 
-# Load data.
-school_absences <- read.csv(
-  "../Data/data_clean.csv", 
-  header=TRUE, sep=","
-)
-response_variable <- "absences"
-
-# Get best model.
-model_type <- get_best_model(
-  data = school_absences,
-  response_variable = response_variable
-)
-
-
+## Load data.
+#school_absences <- read.csv(
+#  "../Data/data_clean.csv",
+#  header=TRUE, sep=","
+#)
+#response_variable <- "absences"
+#
+## Get best model.
+#model_type <- get_best_model(
+#  data = school_absences,
+#  response_variable = response_variable
+#)
