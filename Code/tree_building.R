@@ -14,11 +14,19 @@ source("./model_selection.R")
 source("./split_variable_selection.R")
 source("./split_set_selection.R")
 
-create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS) {
+
+create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0.05, max_depth=-1) {
+
   ### A function that recursively builds a decision tree.
   ### @param data: Data set using which to build the tree.
   ### @param RESPONSE_VARIABLE: The variable that is to be
   ###                           predicted.
+  ### @param min_split_pc: The minimum percent of the original
+  ###                      no. of data points that can be in
+  ###                      the parent node to allow for
+  ###                      splitting.
+  ### @param max_depth: The maximum no. of levels that the
+  ###                   are allowed.
   ### @return: Terminal or intermediate nodes of the tree
   ###          with information such as given below.
   ###          Here, $ => for intermediate node only and
@@ -59,8 +67,9 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS) {
   # or if all values in the response variable
   # are the same. This is a valid leaf.
   if (
-    nrow(data) <= (0.05 * TOTAL_N_ROWS) ||
-    length(unique(data[[RESPONSE_VARIABLE]])) == 1
+    nrow(data) < (min_split_pc * TOTAL_N_ROWS) ||
+    length(unique(data[[RESPONSE_VARIABLE]])) == 1 ||
+    (max_depth >= 0 && level == max_depth)
   ) {
     
     # Drop factors that only have one level
@@ -206,6 +215,7 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS) {
 #data_train <- shuffled_data[index_train, ]
 #data_test <- shuffled_data[-index_train, ]
 
+
 ## Sanitize data for model fitting.
 #data_sanitized <- sanitize_fit_input(
 #  data_check = data_train,
@@ -217,6 +227,9 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS) {
 #
 ## Build tree.
 #TOTAL_N_ROWS <- nrow(data_train) # global variable.
-#root <- create_tree(data = data_train)
+#root <- create_tree(
+#  data = data_train,
+#  min_split_pc = 0.3
+#)
 
 
