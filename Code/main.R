@@ -53,7 +53,6 @@ data_train <- data_sanitized[[1]]
 data_test <- data_sanitized[[2]]
 
 
-
 # Calculate metrics for each model using 10-fold cross validation
 res.pois <- evaluate_cv("p", data_train)
 res.nb <- evaluate_cv("nb", data_train)
@@ -90,6 +89,8 @@ sd.results <- data.frame(rbind("Poisson" = apply(res.pois, 2, function(x) sd(na.
                     "CORE" = apply(res.core, 2, function(x) sd(na.omit(x)))))
 colnames(sd.results) <- c("mse.train_sd", "mae.train_sd", "mse.test_sd", "mae.test_sd",
                           "dispersion_sd","expected.zero.ratio_sd")
+            "dispersion_sd", "expected.zero_sd","expected.zero.ratio_sd")
+
 
 results <- data.frame(cbind(mean.results, sd.results))
 results$model <- rownames(results)
@@ -271,4 +272,3 @@ ggplot(results2) +
   labs(x = "Depth limit", y = "Ratio expected/oberved zeros")+
   geom_hline(yintercept=1, color = "red")+
   theme(text=element_text(size=15))
-
