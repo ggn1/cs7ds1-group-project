@@ -15,8 +15,9 @@ source("./split_variable_selection.R")
 source("./split_set_selection.R")
 
 
-create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0.05, max_depth=-1) {
-
+create_tree <- function(
+    data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0.05, max_depth=-1
+) {
   ### A function that recursively builds a decision tree.
   ### @param data: Data set using which to build the tree.
   ### @param RESPONSE_VARIABLE: The variable that is to be
@@ -42,7 +43,6 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
   print(paste(
     "Building Tree ( level", level, ")"
   ))
-
   
   # 1. Model selection.
   model_type <- get_best_model(
@@ -52,16 +52,17 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
   
   # 2. Check for stopping condition.
   
+  # INVALID NODE
   # If no model could fit this data, then this 
   # is an invalid leaf that will be pruned.
-  if(model_type == 'none' || (max_depth >= 0 && level > max_depth)) {
-    # Return terminal node.
+  if(model_type == 'none') {
+    # Return invalid node.
     node <- hash()
     node[["type"]] <- "invalid"
-    node[['data']] <- data
     return(node)
   }
   
+  # TERMINAL NODE 
   # Stop growing if this node has < 5% of
   # the data points in the original data set
   # or if all values in the response variable
@@ -69,28 +70,28 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
   if (
     nrow(data) < (min_split_pc * TOTAL_N_ROWS) ||
     length(unique(data[[RESPONSE_VARIABLE]])) == 1 ||
-    (max_depth >= 0 && level == max_depth)
+    (max_depth >= 0 && level >= max_depth)
   ) {
-    
-    # Drop factors that only have one level
-    cols_unique <- sapply(data, function(x) length(unique(x))) > 1
-    data <- data[names(cols_unique[cols_unique])]
-    
-    # Fit model for terminal node
-    model <- fit_model(
-      model_type = model_type, 
-      data = data, 
-      response_variable = RESPONSE_VARIABLE
-    )
-      
     # Return terminal node.
     node <- hash()
     node[["type"]] <- "terminal"
     node[['data']] <- data
     node[['model_type']] <- model_type
-    node[['model']] <- model
     node[['has_left_child']] <- FALSE
     node[['has_right_child']] <- FALSE
+    data_sanitized <- sanitize_fit_input(
+      data_check = data,
+      data_apply = list(data),
+      response_variable = RESPONSE_VARIABLE
+    )
+    data2fit <- data_sanitized[[1]]
+    m <- fit_model(
+      model_type = model_type,
+      data = data2fit,
+      response_variable = RESPONSE_VARIABLE
+    )
+    node[['model']] <- m
+    node[['features']] <- names(data2fit)
     return(node)
   }
   
@@ -132,27 +133,26 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
       , drop = FALSE
     ]
   }
-  #data_split <- do_split_data(data, split_variable, split_set)
-
+  
   # 6. Recursively call the create tree
   #    function with data from both child
   #    nodes to build the next level of the tree.
   left_child <- create_tree(
     data = data_split[['left']], 
     level=level+1,
-    TOTAL_N_ROWS,
-    min_split_pc=min_split_pc, 
-    max_depth=min_split_pc
+    TOTAL_N_ROWS = TOTAL_N_ROWS,
+    max_depth = max_depth,
+    min_split_pc = min_split_pc
   )
   right_child <- create_tree(
     data = data_split[['right']], 
     level=level+1,
-    TOTAL_N_ROWS,
-    min_split_pc=min_split_pc, 
-    max_depth=min_split_pc
+    TOTAL_N_ROWS = TOTAL_N_ROWS,
+    max_depth = max_depth,
+    min_split_pc = min_split_pc
   )
   
-  # Return intermediate node.
+  # INTERMEDIATE (POSSIBLY TERMINAL) NODE
   node <- hash()
   node[['type']] <- "intermediate"
   node[['split_variable']] <- split_variable
@@ -171,69 +171,32 @@ create_tree <- function(data, level=0, TOTAL_N_ROWS=TOTAL_N_ROWS, min_split_pc=0
     node[['has_right_child']] <- FALSE
   }
   if (
-    node[['has_left_child']] == FALSE &&
+    node[['has_left_child']] == FALSE ||
     node[['has_right_child']] == FALSE
   ) {
+    node[['left_left_child']] == FALSE
+    node[['has_right_child']] == FALSE
+    if ("left_child" %in% keys(node)) {
+      del("left_child", node)
+    }
+    if ("right_child" %in% keys(node)) {
+      del("right_child", node)
+    }
     node[['type']] <- "terminal"
-    
-    # Drop factors that only have one level
-    cols_unique <- sapply(data, function(x) length(unique(x))) > 1
-    data <- data[names(cols_unique[cols_unique])]
-    
-    # Fit model for terminal node
-    model <- fit_model(
-      model_type = model_type, 
-      data = data, 
-      response_variable = RESPONSE_VARIABLE
-    )
     node[['data']] <- data
-    node[['model_type']] <- model_type
-    node[['model']] <- model
   }
+  data_sanitized <- sanitize_fit_input(
+    data_check = data,
+    data_apply = list(data),
+    response_variable = RESPONSE_VARIABLE
+  )
+  data2fit <- data_sanitized[[1]]
+  m <- fit_model(
+    model_type = model_type,
+    data = data2fit,
+    response_variable = RESPONSE_VARIABLE
+  )
+  node[['model']] <- m
+  node[['features']] <- names(data2fit)
   return(node)
 }
-
-# MAIN
-
-## Load data.
-#school_absences <- read.csv(
-#  "../Data/data_clean.csv",
-#  header=TRUE, sep=","
-#)
-#RESPONSE_VARIABLE <- "absences"
-#
-## Shuffle
-#set.seed(32)
-#shuffled_data <- school_absences[
-#  sample(nrow(school_absences)), 
-#]
-#
-## Reset index.
-#rownames(shuffled_data) <- NULL
-
-## 80/20 train/test split.
-#index_train <- createDataPartition(
-#  shuffled_data[RESPONSE_VARIABLE][,], 
-#  p = 0.8, list = FALSE
-#)
-#data_train <- shuffled_data[index_train, ]
-#data_test <- shuffled_data[-index_train, ]
-
-
-## Sanitize data for model fitting.
-#data_sanitized <- sanitize_fit_input(
-#  data_check = data_train,
-#  data_apply = list(data_train, data_test),
-#  response_variable = RESPONSE_VARIABLE
-#)
-#data_train <- data_sanitized[[1]]
-#data_test <- data_sanitized[[2]]
-#
-## Build tree.
-#TOTAL_N_ROWS <- nrow(data_train) # global variable.
-#root <- create_tree(
-#  data = data_train,
-#  min_split_pc = 0.3
-#)
-
-

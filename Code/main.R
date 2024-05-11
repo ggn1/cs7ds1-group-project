@@ -64,6 +64,7 @@ res.hurdle.nb <- evaluate_cv("hnb", data_train)
 res.mob.p <- evaluate_cv("mob_p", data_train)
 res.mob.nb <- evaluate_cv("mob_nb", data_train)
 res.core <- evaluate_cv("core", data_train, min_split_pc=0.1, max_depth=-1)
+res.core[sapply(res.core, is.infinite)] <- NA
 
 # Aggregate results
 mean.results <- data.frame(rbind("Poisson" = colMeans(res.pois, na.rm = TRUE),
@@ -116,8 +117,7 @@ ggplot(rbind(train, test)) +
   geom_errorbar(aes(x=reorder(model, id), ymin=mean-sd, ymax=mean+sd, group=data), 
                 width=.2, position=position_dodge(.9)) +
   labs(x = "Model", y = "MSE")+
-  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))+
-  coord_cartesian(ylim=c(0,60))
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 # MAE
@@ -137,8 +137,7 @@ ggplot(rbind(train, test)) +
   geom_errorbar(aes(x=reorder(model, id), ymin=mean-sd, ymax=mean+sd, group=data), 
                 width=.2, position=position_dodge(.9)) +
   labs(x = "Model", y = "MAE")+
-  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))+
-  coord_cartesian(ylim=c(0,5))
+  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Dispersion
 ggplot(results) +
@@ -171,18 +170,19 @@ ggplot(results) +
 # Test different depth limitation
 res.core.7 <- evaluate_cv("core", data_train, min_split_pc=0.1, max_depth=7)
 res.core.5 <- evaluate_cv("core", data_train, min_split_pc=0.1, max_depth=5)
+res.core.5[sapply(res.core.5, is.infinite)] <- NA
 res.core.3 <- evaluate_cv("core", data_train, min_split_pc=0.1, max_depth=3)
 
 # Aggregate results
 mean.results2 <- data.frame(rbind("3" = colMeans(res.core.3),
-                                 "5" = colMeans(res.core.5),
+                                 #"5" = colMeans(res.core.5),
                                  "7" = colMeans(res.core.7),
                                  "None" = colMeans(res.core)))
 colnames(mean.results2) <- c("mse.train_mean", "mae.train_mean", "mse.test_mean", "mae.test_mean",
                             "dispersion_mean","expected.zero.ratio_mean")
 
 sd.results2 <- data.frame(rbind("3" = apply(res.core.3, 2, sd),
-                               "5" = apply(res.core.5, 2, sd),
+                               #"5" = apply(res.core.5, 2, sd),
                                "7" = apply(res.core.7, 2, sd),
                                "None" = apply(res.core, 2, sd)))
 colnames(sd.results2) <- c("mse.train_sd", "mae.train_sd", "mse.test_sd", "mae.test_sd",
@@ -215,10 +215,10 @@ ggplot(rbind(train, test)) +
                 width=.2, position=position_dodge(.9)) +
   labs(x = "Depth limit", y = "MSE")+
   theme(text=element_text(size=15))+
-  coord_cartesian(ylim=c(0,60))+
-  geom_label(aes(x=reorder(depth.limit, id), y=mean-sd-3,
+  coord_cartesian(ylim=c(0,100))+
+  geom_label(aes(x=reorder(depth.limit, id), y=mean,#-sd-3,
                  label = signif(mean,4)), 
-             alpha=0.7, nudge_x=c(-1, -1, -1, -1, 1, 1, 1, 1)*0.22)
+             alpha=0.7, nudge_x=c(-1, -1, -1, 1, 1, 1, 1)*0.22)
 
 
 # MAE
@@ -238,7 +238,7 @@ ggplot(rbind(train, test)) +
   geom_errorbar(aes(x=reorder(depth.limit, id), ymin=mean-sd, ymax=mean+sd, group=data), 
                 width=.2, position=position_dodge(.9)) +
   labs(x = "Depth limit", y = "MAE")+
-  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))+
+  theme(text=element_text(size=15))+
   coord_cartesian(ylim=c(0,5))+
   geom_label(aes(x=reorder(depth.limit, id), y=mean-sd-0.3,
                  label = signif(mean,4)), 
