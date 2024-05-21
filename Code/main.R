@@ -66,28 +66,38 @@ res.core <- evaluate_cv("core", data_train, min_split_pc=0.1, max_depth=-1)
 res.core[sapply(res.core, is.infinite)] <- NA
 
 # Aggregate results
-mean.results <- data.frame(rbind("Poisson" = colMeans(res.pois, na.rm = TRUE),
-                      "NB" = colMeans(res.nb, na.rm = TRUE),
-                      "ZIP" = colMeans(res.zip, na.rm = TRUE),
-                      "ZINB" = colMeans(res.zinb, na.rm = TRUE),
-                      "Hurdle Poisson" = colMeans(res.hurdle.p, na.rm = TRUE),
-                      "Hurdle NB" = colMeans(res.hurdle.nb, na.rm = TRUE),
-                      "MOB Poisson" = colMeans(res.mob.p, na.rm = TRUE),
-                      "MOB NB" = colMeans(res.mob.nb, na.rm = TRUE),
-                      "CORE" = colMeans(res.core, na.rm = TRUE)))
-colnames(mean.results) <- c("mse.train_mean", "mae.train_mean", "mse.test_mean", "mae.test_mean",
-                            "dispersion_mean","expected.zero.ratio_mean")
+mean.results <- data.frame(rbind(
+  "Poisson" = colMeans(res.pois, na.rm = TRUE),
+  "NB" = colMeans(res.nb, na.rm = TRUE),
+  "ZIP" = colMeans(res.zip, na.rm = TRUE),
+  "ZINB" = colMeans(res.zinb, na.rm = TRUE),
+  "Hurdle Poisson" = colMeans(res.hurdle.p, na.rm = TRUE),
+  "Hurdle NB" = colMeans(res.hurdle.nb, na.rm = TRUE),
+  "MOB Poisson" = colMeans(res.mob.p, na.rm = TRUE),
+  "MOB NB" = colMeans(res.mob.nb, na.rm = TRUE),
+  "CORE" = colMeans(res.core, na.rm = TRUE)
+))
+colnames(mean.results) <- c(
+  "mse.train_mean", "mae.train_mean", 
+  "mse.test_mean", "mae.test_mean",
+  "dispersion_mean","expected.zero.ratio_mean"
+)
 
-sd.results <- data.frame(rbind("Poisson" = apply(res.pois, 2, function(x) sd(na.omit(x))),
-                    "NB" = apply(res.nb, 2, function(x) sd(na.omit(x))),
-                    "ZIP" = apply(res.zip, 2, function(x) sd(na.omit(x))),
-                    "ZINB" = apply(res.zinb, 2, function(x) sd(na.omit(x))),
-                    "Hurdle Poisson" = apply(res.hurdle.p, 2, function(x) sd(na.omit(x))),
-                    "Hurdle NB" = apply(res.hurdle.nb, 2, function(x) sd(na.omit(x))),
-                    "MOB Poisson" = apply(res.mob.p, 2, function(x) sd(na.omit(x))),
-                    "MOB NB" = apply(res.mob.nb, 2, function(x) sd(na.omit(x))),
-                    "CORE" = apply(res.core, 2, function(x) sd(na.omit(x)))))
-colnames(sd.results) <- c("mse.train_sd", "mae.train_sd", "mse.test_sd", "mae.test_sd", "dispersion_sd", "expected.zero_sd","expected.zero.ratio_sd")
+sd.results <- data.frame(rbind(
+  "Poisson" = apply(res.pois, 2, function(x) sd(na.omit(x))),
+  "NB" = apply(res.nb, 2, function(x) sd(na.omit(x))),
+  "ZIP" = apply(res.zip, 2, function(x) sd(na.omit(x))),
+  "ZINB" = apply(res.zinb, 2, function(x) sd(na.omit(x))),
+  "Hurdle Poisson" = apply(res.hurdle.p, 2, function(x) sd(na.omit(x))),
+  "Hurdle NB" = apply(res.hurdle.nb, 2, function(x) sd(na.omit(x))),
+  "MOB Poisson" = apply(res.mob.p, 2, function(x) sd(na.omit(x))),
+  "MOB NB" = apply(res.mob.nb, 2, function(x) sd(na.omit(x))),
+  "CORE" = apply(res.core, 2, function(x) sd(na.omit(x)))
+))
+colnames(sd.results) <- c(
+  "mse.train_sd", "mae.train_sd", "mse.test_sd", 
+  "mae.test_sd", "dispersion_sd", "expected.zero.ratio_sd"
+)
 
 
 results <- data.frame(cbind(mean.results, sd.results))
@@ -95,7 +105,8 @@ results$model <- rownames(results)
 results$id <- 1:nrow(results)
 results
 
-write.csv(results, "../Results/evaluation_results.csv", row.names=FALSE)
+# # Un-comment to save results.
+# write.csv(results, "../Results/evaluation_results.csv", row.names=FALSE)
 
 # Create plots
 
@@ -110,13 +121,20 @@ test$mean <- results$mse.test_mean
 test$sd <- results$mse.test_sd
 test$data <- as.factor("test")
 
-ggplot(rbind(train, test)) +
-  geom_bar( aes(x=reorder(model, id), y=mean, fill=data), stat="identity", 
-            position = "dodge")+
-  geom_errorbar(aes(x=reorder(model, id), ymin=mean-sd, ymax=mean+sd, group=data), 
-                width=.2, position=position_dodge(.9)) +
-  labs(x = "Model", y = "MSE")+
-  theme(text=element_text(size=15), axis.text.x = element_text(angle = 45, hjust = 1))
+ggplot(
+  rbind(train, test)) +
+  geom_bar(
+    aes(x=reorder(model, id), y=mean, fill=data), 
+    stat="identity", position = "dodge"
+  ) + geom_errorbar(aes(
+    x=reorder(model, id), 
+    ymin=mean-sd, ymax=mean+sd, group=data), 
+    width=.2, position=position_dodge(.9)
+  ) + labs(x = "Model", y = "MSE") +
+  theme(
+    text=element_text(size=15), 
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
 
 
 # MAE
@@ -192,7 +210,8 @@ results2$depth.limit <- rownames(results2)
 results2$id <- 1:nrow(results2)
 results2
 
-write.csv(results, "../Results/evaluation_depthlim_results.csv", row.names=FALSE)
+# # Un-comment to save results.
+# write.csv(results, "../Results/evaluation_depthlim_results.csv", row.names=FALSE)
 
 # Create plots
 
