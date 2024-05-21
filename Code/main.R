@@ -87,9 +87,7 @@ sd.results <- data.frame(rbind("Poisson" = apply(res.pois, 2, function(x) sd(na.
                     "MOB Poisson" = apply(res.mob.p, 2, function(x) sd(na.omit(x))),
                     "MOB NB" = apply(res.mob.nb, 2, function(x) sd(na.omit(x))),
                     "CORE" = apply(res.core, 2, function(x) sd(na.omit(x)))))
-colnames(sd.results) <- c("mse.train_sd", "mae.train_sd", "mse.test_sd", "mae.test_sd",
-                          "dispersion_sd","expected.zero.ratio_sd")
-            "dispersion_sd", "expected.zero_sd","expected.zero.ratio_sd")
+colnames(sd.results) <- c("mse.train_sd", "mae.train_sd", "mse.test_sd", "mae.test_sd", "dispersion_sd", "expected.zero_sd","expected.zero.ratio_sd")
 
 
 results <- data.frame(cbind(mean.results, sd.results))

@@ -10,8 +10,6 @@ print(getwd())
 # HELPER FUNCTIONS
 source("./tree_building.R")
 
-
-
 calculate.model.metrics <- function(model, response_variable, model_type, newdata = newdata){
   # Calculate training accuracy
   squ_err.sum.train <- sum(residuals(model, type = "response")^2)
@@ -28,7 +26,6 @@ calculate.model.metrics <- function(model, response_variable, model_type, newdat
   squ_err.sum.test <- tmp[1]
   abs_err.sum.test <- tmp[2]
   n_residual.test <- tmp[3]
-  
   
   # Calculate dispersion
   if (model_type %in% c("mob_p", "mob_nb")){

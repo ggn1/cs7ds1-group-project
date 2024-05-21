@@ -1,8 +1,0 @@
-1. Abstract needs more work.
-2. Hypothesis & Key Findings section.
-3. Results
-4. Discussion
-5. Conclusion
-6. Split set selection MAE explanation.
-7. Regression trees background.
-8. Hurdle models background.
